@@ -1,0 +1,241 @@
+@import "tailwindcss";
+@config "./tailwind.config.js";
+
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+body.estate-admin-theme {
+    background: #fbf8fa;
+    color: #1b1b1d;
+}
+
+body.estate-admin-theme .bg-white {
+    background-color: #fbf8fa;
+}
+
+body.estate-admin-theme .bg-surface-container-lowest,
+body.estate-admin-theme .sticky.bg-white,
+body.estate-admin-theme nav.bg-white,
+body.estate-admin-theme footer.bg-white,
+body.estate-admin-theme section.bg-white,
+body.estate-admin-theme div.bg-white {
+    background-color: #ffffff;
+}
+
+body.estate-admin-theme .bg-slate-50 {
+    background-color: #f5f3f4;
+}
+
+body.estate-admin-theme .bg-slate-100 {
+    background-color: #f0edef;
+}
+
+body.estate-admin-theme .bg-slate-900 {
+    background-color: #091426;
+}
+
+body.estate-admin-theme .hover\:bg-slate-800:hover {
+    background-color: #1e293b;
+}
+
+body.estate-admin-theme .hover\:bg-slate-50:hover,
+body.estate-admin-theme .hover\:bg-slate-100:hover {
+    background-color: #f0edef;
+}
+
+body.estate-admin-theme .text-slate-900 {
+    color: #1b1b1d;
+}
+
+body.estate-admin-theme .text-slate-600,
+body.estate-admin-theme .text-slate-500,
+body.estate-admin-theme .text-slate-400 {
+    color: #45474c;
+}
+
+body.estate-admin-theme .hover\:text-slate-900:hover {
+    color: #091426;
+}
+
+body.estate-admin-theme .border-slate-50,
+body.estate-admin-theme .border-slate-100,
+body.estate-admin-theme .border-slate-200 {
+    border-color: #c5c6cd;
+}
+
+body.estate-admin-theme input,
+body.estate-admin-theme select,
+body.estate-admin-theme textarea {
+    color: #1b1b1d;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Universal Design Language Component Styles ─── */
+:root {
+    --primary-color: #091426;
+    --primary-hover: #1e293b;
+    --bg-color: #fbf8fa;
+    --surface-color: #ffffff;
+    --border-color: rgba(197, 198, 205, 0.5); /* #c5c6cd with transparency */
+    --border-radius-card: 16px;
+    --border-radius-btn: 12px;
+    --transition-standard: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Premium Card Styles */
+.premium-card {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-card);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+    transition: var(--transition-standard);
+}
+.premium-card:hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+}
+
+/* Premium Button Styles */
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--border-radius-btn);
+    background-color: var(--primary-color);
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    transition: var(--transition-standard);
+    box-shadow: 0 2px 4px rgba(15,23,42,0.08);
+}
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(15,23,42,0.12);
+}
+.btn-primary:active {
+    transform: translateY(0);
+    scale: 0.98;
+}
+
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: var(--border-radius-btn);
+    background-color: #f8fafc;
+    border: 1.5px solid var(--border-color);
+    color: #334155;
+    font-size: 14px;
+    font-weight: 700;
+    transition: var(--transition-standard);
+}
+.btn-secondary:hover {
+    background-color: #f1f5f9;
+    color: var(--primary-color);
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+}
+.btn-secondary:active {
+    transform: translateY(0);
+    scale: 0.98;
+}
+
+/* Standardized Heading & Subheading classes */
+.heading-xl {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--primary-color);
+}
+@media (min-width: 768px) {
+    .heading-xl { font-size: 40px; }
+}
+
+.heading-lg {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.015em;
+    color: var(--primary-color);
+}
+@media (min-width: 768px) {
+    .heading-lg { font-size: 30px; }
+}
+
+.heading-md {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--primary-color);
+}
+@media (min-width: 768px) {
+    .heading-md { font-size: 22px; }
+}
+
+/* ─── Unified Theme Overrides for Premium Aesthetic Consistency ─── */
+body.estate-admin-theme .rounded-xl.border {
+    border-radius: 16px !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.estate-admin-theme .rounded-xl.border:hover {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) !important;
+    transform: translateY(-2px);
+}
+
+body.estate-admin-theme .rounded-lg {
+    border-radius: 12px !important;
+}
+
+body.estate-admin-theme .rounded-DEFAULT {
+    border-radius: 8px !important;
+}
+
+/* Headings weight standardization for premium structure */
+body.estate-admin-theme h1,
+body.estate-admin-theme .text-h1,
+body.estate-admin-theme .font-h1,
+body.estate-admin-theme .heading-xl {
+    font-weight: 800 !important;
+}
+
+body.estate-admin-theme h2,
+body.estate-admin-theme .text-h2,
+body.estate-admin-theme .font-h2,
+body.estate-admin-theme .heading-lg {
+    font-weight: 800 !important;
+}
+
+body.estate-admin-theme h3,
+body.estate-admin-theme .text-h3,
+body.estate-admin-theme .font-h3,
+body.estate-admin-theme .heading-md {
+    font-weight: 700 !important;
+}
+
+/* --- Mobile Bottom Navigation Styling --- */
+.safe-area-inset-bottom {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom)) !important;
+}
+
+.mobile-nav-btn {
+    min-width: 48px;
+    min-height: 48px;
+}
+
+@media (max-width: 767px) {
+    body.estate-admin-theme main {
+        padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)) !important;
+    }
+}
+
+
+

@@ -1,0 +1,12 @@
+node_modules
+dist
+.DS_Store
+.agents
+.vercel
+*.log
+*.mkv
+*.exe
+*.zip
+
+.env
+.env.*

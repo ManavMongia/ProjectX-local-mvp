@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<link rel="preconnect" href="https://lh3.googleusercontent.com" crossorigin="anonymous">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>EstatePro - Employee Panel</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+    <link rel="stylesheet" href="/style.css">
+<script type="module" src="/auth.js"></script>
+</head>
+<body class="estate-admin-theme bg-background text-on-background antialiased min-h-screen flex flex-col md:flex-row">
+<!-- Mobile Sidebar Backdrop -->
+<div id="mobile-sidebar-backdrop" class="fixed inset-0 bg-slate-900/50 z-[55] hidden opacity-0 transition-opacity duration-300 md:hidden"></div>
+
+<!-- SideNavBar (Shared Component) -->
+<nav class="h-screen w-64 border-r fixed left-0 top-0 border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 font-['Outfit'] text-sm font-medium z-[60] flex flex-col justify-between transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0">
+<div class="flex flex-col p-4 gap-2">
+<!-- Header -->
+<div class="flex items-center gap-3 px-3 py-4 mb-4">
+<div aria-label="Broker Profile" class="h-10 w-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center overflow-hidden flex-shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">real_estate_agent</span>
+</div>
+<div>
+<h2 class="text-lg font-bold text-slate-900 dark:text-white">Premier Realty</h2>
+<p class="text-slate-500 dark:text-slate-400 text-xs">Employee Panel</p>
+</div>
+</div>
+<!-- Navigation Links -->
+<div class="flex flex-col gap-1">
+<!-- ACTIVE TAB: Overview -->
+<a class="flex items-center gap-3 px-3 py-2 bg-surface-container-lowest dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm ring-1 ring-slate-200 dark:ring-slate-800 rounded-lg transition-all duration-200 ease-in-out hover:bg-slate-100 dark:hover:bg-slate-800" href="/employee-panel.html">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-all duration-200 ease-in-out hover:bg-slate-100 dark:hover:bg-slate-800" href="/properties.html">
+<span class="material-symbols-outlined">domain</span>
+<span>Listings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-all duration-200 ease-in-out hover:bg-slate-100 dark:hover:bg-slate-800" href="/properties.html">
+<span class="material-symbols-outlined">person_search</span>
+<span>Leads</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-all duration-200 ease-in-out hover:bg-slate-100 dark:hover:bg-slate-800" href="/employee-panel.html">
+<span class="material-symbols-outlined">insights</span>
+<span>Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-all duration-200 ease-in-out hover:bg-slate-100 dark:hover:bg-slate-800" href="/employee-panel.html#support-tickets-section">
+<span class="material-symbols-outlined">forum</span>
+<span>Messages</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-all duration-200 ease-in-out hover:bg-slate-100 dark:hover:bg-slate-800" href="/employee-panel.html">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+<a id="admin-panel-link" class="hidden items-center gap-3 px-3 py-2 text-red-600 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-all duration-200 ease-in-out hover:bg-slate-100 dark:hover:bg-slate-800" href="/admin-panel.html">
+<span class="material-symbols-outlined">admin_panel_settings</span>
+<span>Admin Panel</span>
+</a>
+</div>
+<!-- CTA -->
+<div class="mt-6 px-3">
+<button class="w-full flex items-center justify-center gap-2 py-2 bg-primary text-on-primary rounded-lg font-medium shadow-sm hover:opacity-90 transition-all duration-200 ease-in-out">
+<span class="material-symbols-outlined">add</span>
+<span>Add Listing</span>
+</button>
+</div>
+</div>
+<!-- Footer Links -->
+<div class="flex flex-col p-4 gap-2 border-t border-slate-200 dark:border-slate-800">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-all duration-200 ease-in-out hover:bg-slate-100 dark:hover:bg-slate-800" href="/index.html">
+<span class="material-symbols-outlined">help</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg transition-all duration-200 ease-in-out hover:bg-slate-100 dark:hover:bg-slate-800" href="#" onclick="window.logout(); return false;">
+<span class="material-symbols-outlined">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</nav>
+
+<!-- Mobile Top Header -->
+<header class="md:hidden sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 z-40 flex items-center justify-between px-4 py-3">
+    <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-primary text-[24px]">real_estate_agent</span>
+        <span class="font-bold text-slate-900 dark:text-white text-sm">Premier Realty</span>
+    </div>
+    <button id="mobile-menu-btn" class="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors bg-slate-100 dark:bg-slate-800 p-2 rounded-lg flex items-center justify-center">
+        <span class="material-symbols-outlined text-[20px]">menu</span>
+    </button>
+</header>
+
+<!-- Main Content Area -->
+<main class="flex-1 ml-0 md:ml-64 p-margin-mobile md:p-margin-desktop bg-background min-h-screen">
+<div class="max-w-[1400px] mx-auto flex flex-col gap-gutter">
+<!-- Page Header -->
+<header class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-outline-variant pb-6">
+<div>
+<h1 class="font-h2 text-h2 text-on-background mb-1">Employee Operations Panel</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Manage listings, support requests, and platform moderation.</p>
+</div>
+<div class="flex gap-3">
+<span class="inline-flex items-center gap-2 bg-surface-container px-3 py-1.5 rounded-full font-label-caps text-label-caps text-on-surface">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                        System Operational
+                    </span>
+</div>
+</header>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-gutter">
+<section class="xl:col-span-2 flex flex-col gap-stack-md bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-lg shadow-sm">
+<div class="flex justify-between items-center mb-2">
+<h2 class="font-h3 text-h3 text-on-background flex items-center gap-2">
+<span class="material-symbols-outlined text-outline">fact_check</span>
+                            Listings Review Queue
+                        </h2>
+<span class="font-body-sm text-body-sm text-on-surface-variant bg-surface-container px-2 py-1 rounded-md" id="pending-count-badge">... Pending</span>
+</div>
+<div class="flex flex-col gap-3 border-b border-outline-variant pb-4 mb-2 bg-surface-container-lowest">
+  <!-- Status Filter Row -->
+  <div class="flex flex-wrap gap-2 items-center">
+    <span class="text-xs font-semibold text-slate-500 mr-1 font-body-sm">Status:</span>
+    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-slate-900 text-white transition-colors" data-status="All">All</button>
+    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Pending">Pending</button>
+    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Active">Active</button>
+    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Flagged">Flagged</button>
+  </div>
+  <!-- Assignment Filter Row -->
+  <div class="flex flex-wrap gap-2 items-center">
+    <span class="text-xs font-semibold text-slate-500 mr-1 font-body-sm">Assignment:</span>
+    <button class="assign-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-slate-900 text-white transition-colors" data-assign="All">All</button>
+    <button class="assign-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-assign="Me">My Assignments</button>
+    <button class="assign-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-assign="Unassigned">Unassigned</button>
+  </div>
+</div>
+<div id="listings-review-queue-list" class="flex flex-col gap-4">
+  <div class="text-center py-8 text-on-surface-variant text-sm">Loading review queue...</div>
+</div>
+</section>
+
+<!-- Reported Issues Queue Section -->
+<section class="xl:col-span-2 flex flex-col gap-stack-md bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-lg shadow-sm">
+    <div class="flex justify-between items-center mb-2">
+        <h2 class="font-h3 text-h3 text-on-background flex items-center gap-2">
+            <span class="material-symbols-outlined text-outline">report</span>
+            Reported Issues Queue
+        </h2>
+        <span class="font-body-sm text-body-sm text-on-surface-variant bg-surface-container px-2 py-1 rounded-md" id="pending-reports-badge">... Pending</span>
+    </div>
+    <div class="table-container overflow-x-auto font-sans">
+      <table class="w-full text-left border-collapse min-w-[600px]">
+        <thead class="bg-surface-container-low border-b border-outline-variant">
+          <tr>
+            <th class="p-3 font-label-caps text-xs text-on-surface-variant uppercase tracking-widest">Reporter</th>
+            <th class="p-3 font-label-caps text-xs text-on-surface-variant uppercase tracking-widest">Type</th>
+            <th class="p-3 font-label-caps text-xs text-on-surface-variant uppercase tracking-widest">Item</th>
+            <th class="p-3 font-label-caps text-xs text-on-surface-variant uppercase tracking-widest">Details</th>
+            <th class="p-3 font-label-caps text-xs text-on-surface-variant uppercase tracking-widest text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="reports-table-body" class="font-body-sm text-body-sm text-on-surface">
+          <tr class="border-b border-surface-variant bg-surface-bright">
+            <td colspan="5" class="py-8 text-center text-on-surface-variant text-sm">Loading reports...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+</section>
+<!-- Right Column: Support & Moderation -->
+<div class="flex flex-col gap-gutter">
+<!-- Support Tickets -->
+<section id="support-tickets-section" class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-sm">
+<div class="flex justify-between items-center mb-4">
+<h2 class="font-h3 text-h3 text-on-background text-lg flex items-center gap-2">
+<span class="material-symbols-outlined text-outline">support_agent</span>
+                                Support Tickets
+                            </h2>
+<button class="text-on-tertiary-container font-body-sm text-body-sm font-medium hover:underline">View All</button>
+</div>
+<div class="flex flex-col gap-2">
+<!-- Ticket Item -->
+<div class="p-3 border border-outline-variant rounded-lg bg-surface-bright flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<span class="font-label-caps text-label-caps text-on-surface-variant">#TK-8992</span>
+<span class="bg-error-container text-on-error-container px-2 py-0.5 rounded font-label-caps text-[10px]">High Priority</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-background font-medium">Listing upload error</p>
+<div class="flex justify-between items-center mt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-xs">Agent: Sarah J.</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant text-xs">10m ago</span>
+</div>
+</div>
+<!-- Ticket Item -->
+<div class="p-3 border border-outline-variant rounded-lg bg-surface-bright flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<span class="font-label-caps text-label-caps text-on-surface-variant">#TK-8991</span>
+<span class="bg-surface-container-high text-on-surface px-2 py-0.5 rounded font-label-caps text-[10px]">Open</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-background font-medium">Account access issue</p>
+<div class="flex justify-between items-center mt-1">
+<span class="font-body-sm text-body-sm text-on-surface-variant text-xs">User: Mike T.</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant text-xs">1h ago</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Moderation Log -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md shadow-sm flex-1">
+<div class="flex justify-between items-center mb-4">
+<h2 class="font-h3 text-h3 text-on-background text-lg flex items-center gap-2">
+<span class="material-symbols-outlined text-outline">history</span>
+                                Moderation Log
+                            </h2>
+</div>
+<div class="relative pl-4 border-l-2 border-surface-container-high flex flex-col gap-6">
+<!-- Log Item -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-secondary"></div>
+<p class="font-body-sm text-body-sm text-on-background mb-0.5"><span class="font-medium">System</span> verified images for Listing #4492.</p>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Just now</span>
+</div>
+<!-- Log Item -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-primary"></div>
+<p class="font-body-sm text-body-sm text-on-background mb-0.5"><span class="font-medium">Admin (You)</span> approved Listing #4490.</p>
+<span class="font-label-caps text-label-caps text-on-surface-variant">15 mins ago</span>
+</div>
+<!-- Log Item -->
+<div class="relative">
+<div class="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-error"></div>
+<p class="font-body-sm text-body-sm text-on-background mb-0.5"><span class="font-medium">Admin (You)</span> flagged User Report #102.</p>
+<span class="font-label-caps text-label-caps text-on-surface-variant">1 hr ago</span>
+</div>
+</div>
+</section>
+</div>
+</div>
+</div>
+</main>
+<script type="module">
+import { supabase } from './lib/supabase.js';
+
+function showEmployeeToast(msg, isError = false) {
+  let t = document.getElementById('employee-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'employee-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#0f172a;color:white;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,0.2);transition:transform 0.3s;white-space:nowrap;z-index:9999;font-family:Outfit,sans-serif';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = isError ? '#ef4444' : '#0f172a';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(() => t.style.transform = 'translateX(-50%) translateY(80px)', 3000);
+}
+
+let session = null;
+let currentStatusFilter = 'All';
+let currentAssignFilter = 'All';
+
+async function checkAuth() {
+  const { data } = await supabase.auth.getSession();
+  session = data.session;
+  if (!session) {
+    window.navigateTo('login.html');
+    return;
+  }
+  
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', session.user.id)
+    .single();
+
+  if (error || !profile || (profile.role !== 'Employee' && profile.role !== 'Admin')) {
+    alert('Access Denied. You must be an authorized Employee or Admin.');
+    await supabase.auth.signOut();
+    window.navigateTo('login.html');
+    return;
+  }
+
+  if (profile.role === 'Admin') {
+    const adminLink = document.getElementById('admin-panel-link');
+    if (adminLink) {
+      adminLink.classList.remove('hidden');
+      adminLink.classList.add('flex');
+    }
+  }
+
+  // Initialize page
+  setupFilterTabs();
+  setupAssignFilterTabs();
+  loadReviewQueue();
+  loadReports();
+}
+
+// Logout handler
+window.logout = async () => {
+  if (confirm('Are you sure you want to log out?')) {
+    await supabase.auth.signOut();
+    localStorage.removeItem('role');
+    localStorage.removeItem('userName');
+    window.navigateTo('login.html');
+  }
+};
+
+function setupFilterTabs() {
+  const tabs = document.querySelectorAll('.status-filter-tab');
+  if (tabs.length === 0) return;
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => {
+        t.classList.remove('bg-slate-900', 'text-white');
+        t.classList.add('bg-surface-container', 'text-on-surface');
+      });
+      tab.classList.remove('bg-surface-container', 'text-on-surface');
+      tab.classList.add('bg-slate-900', 'text-white');
+      currentStatusFilter = tab.getAttribute('data-status');
+      loadReviewQueue();
+    });
+  });
+}
+
+function setupAssignFilterTabs() {
+  const tabs = document.querySelectorAll('.assign-filter-tab');
+  if (tabs.length === 0) return;
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => {
+        t.classList.remove('bg-slate-900', 'text-white');
+        t.classList.add('bg-surface-container', 'text-on-surface');
+      });
+      tab.classList.remove('bg-surface-container', 'text-on-surface');
+      tab.classList.add('bg-slate-900', 'text-white');
+      currentAssignFilter = tab.getAttribute('data-assign');
+      loadReviewQueue();
+    });
+  });
+}
+
+function getPermittedTransitions(status) {
+  if (status === 'Pending') {
+    return [
+      { value: 'Pending', label: 'Pending' },
+      { value: 'Under Review', label: 'Under Review' }
+    ];
+  }
+  if (status === 'Under Review') {
+    return [
+      { value: 'Under Review', label: 'Under Review' },
+      { value: 'Active', label: 'Approved (Active)' },
+      { value: 'Rejected', label: 'Rejected' }
+    ];
+  }
+  if (status === 'Active') {
+    return [
+      { value: 'Active', label: 'Approved (Active)' },
+      { value: 'Under Review', label: 'Under Review' },
+      { value: 'Rejected', label: 'Rejected' }
+    ];
+  }
+  if (status === 'Rejected') {
+    return [
+      { value: 'Rejected', label: 'Rejected' },
+      { value: 'Under Review', label: 'Under Review' },
+      { value: 'Active', label: 'Approved (Active)' }
+    ];
+  }
+  return [
+    { value: status, label: status === 'Active' ? 'Approved' : status },
+    { value: 'Under Review', label: 'Under Review' }
+  ];
+}
+
+let pendingStatusUpdate = null;
+
+window.closeRemarksModal = () => {
+  const modal = document.getElementById('remarks-modal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+  if (pendingStatusUpdate) {
+    const selects = document.querySelectorAll('.status-transition-select');
+    selects.forEach(sel => {
+      if (sel.getAttribute('data-id') == pendingStatusUpdate.id) {
+        sel.value = pendingStatusUpdate.oldStatus;
+      }
+    });
+  }
+  pendingStatusUpdate = null;
+};
+
+// Bind remarks submit button
+document.addEventListener('DOMContentLoaded', () => {
+  const submitRemarksBtn = document.getElementById('submit-remarks-btn');
+  if (submitRemarksBtn) {
+    submitRemarksBtn.onclick = async () => {
+      if (!pendingStatusUpdate) return;
+      const remarks = document.getElementById('remarks-input').value.trim();
+      const { id, title, oldStatus, newStatus, brokerId } = pendingStatusUpdate;
+
+      if (newStatus === 'Rejected' && !remarks) {
+        alert('Please provide a reason for rejecting this listing.');
+        return;
+      }
+
+      try {
+        const remarksToSend = remarks || 'No remarks provided.';
+        const { error } = await supabase
+          .from('listings')
+          .update({ status: newStatus })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        // Log the change
+        if (window.logListingStatusChange) {
+          await window.logListingStatusChange(id, oldStatus, newStatus, remarksToSend);
+        }
+
+        // Send notification
+        if (window.sendBrokerNotification) {
+          await window.sendBrokerNotification(brokerId, title, oldStatus, newStatus, remarksToSend);
+        }
+
+        showEmployeeToast(`✓ Status updated to ${newStatus === 'Active' ? 'Approved' : newStatus}`);
+        
+        const modal = document.getElementById('remarks-modal');
+        if (modal) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        }
+        pendingStatusUpdate = null;
+
+        loadReviewQueue();
+      } catch (err) {
+        console.error(err);
+        showEmployeeToast(err.message, true);
+      }
+    };
+  }
+});
+
+async function loadReviewQueue() {
+  try {
+    // Update Pending badge count
+    const { count: pendingCount } = await supabase
+      .from('listings')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'Pending');
+    document.getElementById('pending-count-badge').textContent = `${pendingCount || 0} Pending`;
+
+    let query = supabase
+      .from('listings')
+      .select('*, assigned_employee:profiles!listings_assigned_employee_id_fkey(id, full_name)')
+      .order('created_at', { ascending: false });
+
+    if (currentStatusFilter !== 'All') {
+      query = query.eq('status', currentStatusFilter);
+    }
+
+    if (currentAssignFilter === 'Me') {
+      query = query.eq('assigned_employee_id', session.user.id);
+    } else if (currentAssignFilter === 'Unassigned') {
+      query = query.is('assigned_employee_id', null);
+    }
+
+    const { data: listings, error } = await query;
+    const container = document.getElementById('listings-review-queue-list');
+    if (error || !listings || listings.length === 0) {
+      container.innerHTML = `<div class="text-center py-8 text-on-surface-variant text-sm">No listings found.</div>`;
+      return;
+    }
+
+    container.innerHTML = listings.map(lst => {
+      const priceStr = new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+      }).format(lst.price);
+
+      const imageSrc = lst.img || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80';
+      const timeStr = new Date(lst.created_at).toLocaleDateString() + ' ' + new Date(lst.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      let badgeClass = 'bg-surface-container-high text-on-surface-variant';
+      let statusLabel = lst.status === 'Active' ? 'Approved' : lst.status;
+      if (lst.status === 'Active') badgeClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
+      else if (lst.status === 'Pending') badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
+      else if (lst.status === 'Under Review') badgeClass = 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
+      else if (lst.status === 'Rejected') badgeClass = 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
+      else if (lst.status === 'Suspended') badgeClass = 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300';
+      else if (lst.status === 'Sold') badgeClass = 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+
+      const isAssignedToMe = lst.assigned_employee_id === session.user.id;
+      const isUnassigned = lst.assigned_employee_id === null;
+
+      let assignmentHtml = '';
+      let actionsHtml = '';
+
+      if (isUnassigned) {
+        assignmentHtml = `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Unassigned</span>`;
+        actionsHtml = `
+          <button class="claim-btn flex-1 bg-slate-900 text-white py-2 rounded font-body-sm text-body-sm font-medium hover:bg-slate-800 transition-colors" data-id="${lst.id}" data-title="${lst.title}">
+            Claim Review
+          </button>
+        `;
+      } else if (isAssignedToMe) {
+        assignmentHtml = `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Assigned to You</span>`;
+        
+        const transitions = getPermittedTransitions(lst.status);
+        actionsHtml = `
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-500">Action:</span>
+            <select class="status-transition-select bg-surface-container border border-outline-variant rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-medium" 
+                    data-id="${lst.id}" data-current="${lst.status}" data-title="${lst.title}" data-broker="${lst.broker_id}">
+              ${transitions.map(t => `<option value="${t.value}" ${t.value === lst.status ? 'selected' : ''}>${t.label}</option>`).join('')}
+            </select>
+          </div>
+        `;
+      } else {
+        const assigneeName = lst.assigned_employee?.full_name || 'Another Staff';
+        assignmentHtml = `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Assigned to: ${assigneeName}</span>`;
+        actionsHtml = `<div class="text-xs text-slate-400 font-medium italic">Assigned to another reviewer.</div>`;
+      }
+
+      return `
+        <div class="flex flex-col md:flex-row gap-6 p-4 rounded-lg border border-outline-variant bg-surface-bright hover:shadow-md transition-shadow relative" data-id="${lst.id}">
+          <div class="w-full md:w-48 h-32 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container">
+            <img src="${imageSrc}" class="w-full h-full object-cover" alt="Property Image"/>
+          </div>
+          <div class="flex-grow flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start mb-1 flex-wrap gap-2">
+                <div>
+                  <h3 class="font-h3 text-h3 text-on-background text-lg font-bold">${lst.title}</h3>
+                  <p class="text-xs text-on-surface-variant">${lst.location}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                  ${assignmentHtml}
+                  <span class="${badgeClass} px-2.5 py-1 rounded font-bold text-xs uppercase tracking-wider flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">info</span>
+                    ${statusLabel}
+                  </span>
+                </div>
+              </div>
+              <p class="font-body-sm text-body-sm text-on-surface-variant mb-2">Submitted by Broker: <span class="font-mono text-[10px] text-primary select-all">${lst.broker_id || 'System'}</span> • ${timeStr}</p>
+              <div class="flex flex-wrap gap-4 font-body-sm text-body-sm text-on-background">
+                <span class="flex items-center gap-1"><span class="material-symbols-outlined text-outline text-[18px]">sell</span> ${priceStr}</span>
+                <span class="flex items-center gap-1"><span class="material-symbols-outlined text-outline text-[18px]">bed</span> ${lst.beds || 0} Beds</span>
+                <span class="flex items-center gap-1"><span class="material-symbols-outlined text-outline text-[18px]">shower</span> ${lst.baths || 0} Baths</span>
+                <span class="flex items-center gap-1"><span class="material-symbols-outlined text-outline text-[18px]">square_foot</span> ${lst.sqft || 0} SqFt</span>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-3 mt-4 items-center justify-between">
+              <button class="preview-btn flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 border border-slate-200 rounded font-body-sm text-body-sm font-medium hover:bg-slate-200 transition-colors" data-id="${lst.id}" data-title="${lst.title}">
+                <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+                Preview
+              </button>
+              ${actionsHtml}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // Bind Claim Handlers
+    document.querySelectorAll('.claim-btn').forEach(btn => {
+      btn.onclick = async () => {
+        const id = btn.getAttribute('data-id');
+        const title = btn.getAttribute('data-title');
+        
+        try {
+          const { error } = await supabase
+            .from('listings')
+            .update({ assigned_employee_id: session.user.id })
+            .eq('id', id);
+
+          if (error) throw error;
+
+          showEmployeeToast(`✓ Claimed listing "${title}"`);
+          loadReviewQueue();
+        } catch (err) {
+          console.error(err);
+          showEmployeeToast(err.message, true);
+        }
+      };
+    });
+
+    // Bind Status Transition Select Handlers
+    document.querySelectorAll('.status-transition-select').forEach(select => {
+      select.onchange = async () => {
+        const id = select.getAttribute('data-id');
+        const title = select.getAttribute('data-title');
+        const oldStatus = select.getAttribute('data-current');
+        const brokerId = select.getAttribute('data-broker');
+        const newStatus = select.value;
+
+        if (oldStatus === newStatus) return;
+
+        pendingStatusUpdate = { id, title, oldStatus, newStatus, brokerId };
+
+        const modal = document.getElementById('remarks-modal');
+        const modalTitle = document.getElementById('remarks-modal-title');
+        const modalDesc = document.getElementById('remarks-modal-desc');
+        const remarksInput = document.getElementById('remarks-input');
+
+        if (modal) {
+          remarksInput.value = '';
+          modalTitle.textContent = `Update to ${newStatus === 'Active' ? 'Approved' : newStatus}`;
+          
+          if (newStatus === 'Rejected') {
+            modalDesc.innerHTML = `<span class="text-red-500 font-semibold">Remarks/Reason are MANDATORY when rejecting a listing.</span>`;
+          } else {
+            modalDesc.textContent = `Please provide optional remarks/reason for this status change.`;
+          }
+
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        }
+      };
+    });
+
+    document.querySelectorAll('.preview-btn').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.getAttribute('data-id');
+        window.open(`/property-details.html?id=${id}&adminPreview=1`, '_blank');
+      };
+    });
+  } catch (err) {
+    console.error("Failed to load review queue:", err);
+  }
+}
+
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadReports() {
+  try {
+    const { data: reports, error } = await supabase
+        .from('reports')
+        .select(`
+            *,
+            profiles:reporter_id (full_name, role)
+        `)
+        .order('created_at', { ascending: false });
+
+    const tbody = document.getElementById('reports-table-body');
+    const badge = document.getElementById('pending-reports-badge');
+
+    if (error) {
+        console.error("Failed to load reports:", error);
+        if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-error">Error loading reports.</td></tr>';
+        return;
+    }
+
+    const pendingCount = reports ? reports.filter(r => r.status === 'Pending').length : 0;
+    if (badge) {
+        badge.textContent = `${pendingCount} Pending`;
+        if (pendingCount > 0) {
+            badge.className = 'bg-red-500 text-white font-label-caps text-[10px] px-2 py-0.5 rounded-full';
+        } else {
+            badge.className = 'bg-slate-200 text-slate-600 font-label-caps text-[10px] px-2 py-0.5 rounded-full';
+        }
+    }
+
+    if (!tbody) return;
+
+    if (!reports || reports.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-8 text-center text-slate-400">No reports submitted yet.</td></tr>';
+        return;
+    }
+
+    const [{ data: listings }, { data: profiles }] = await Promise.all([
+        supabase.from('listings').select('id, title'),
+        supabase.from('profiles').select('id, full_name')
+    ]);
+
+    const listingsMap = {};
+    if (listings) listings.forEach(l => listingsMap[l.id] = l.title);
+    const profilesMap = {};
+    if (profiles) profiles.forEach(p => profilesMap[p.id] = p.full_name);
+
+    tbody.innerHTML = reports.map(r => {
+        const reporterName = r.profiles ? r.profiles.full_name : 'Unknown Reporter';
+        const reporterRole = r.profiles ? r.profiles.role : 'User';
+        
+        let targetName = 'Unknown Target';
+        if (r.target_type === 'listing') {
+            targetName = listingsMap[r.target_id] || `Listing ID: ${r.target_id}`;
+        } else if (r.target_type === 'profile') {
+            targetName = profilesMap[r.target_id] || `User ID: ${r.target_id}`;
+        } else if (r.target_type === 'message') {
+            targetName = `Message ID: ${r.target_id}`;
+        }
+
+        const dateStr = new Date(r.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+        
+        let statusClass = 'bg-slate-100 text-slate-600';
+        if (r.status === 'Pending') statusClass = 'bg-red-100 text-red-800';
+        else if (r.status === 'Actioned') statusClass = 'bg-green-100 text-green-800';
+        else if (r.status === 'Dismissed') statusClass = 'bg-slate-200 text-slate-600';
+
+        const showResolve = r.status === 'Pending';
+        const showDismiss = r.status === 'Pending';
+
+        return `
+          <tr class="border-b border-surface-variant hover:bg-surface-container transition-colors">
+            <td class="p-3">
+              <div class="font-medium text-on-background">${escHtml(reporterName)}</div>
+              <div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">${escHtml(reporterRole)}</div>
+            </td>
+            <td class="p-3 font-semibold uppercase tracking-wider text-[11px] text-on-surface-variant">${r.target_type}</td>
+            <td class="p-3 font-medium max-w-xs truncate" title="${escHtml(targetName)}">${escHtml(targetName)}</td>
+            <td class="p-3 max-w-sm">
+              <div class="font-bold text-slate-900 text-xs">${escHtml(r.reason)}</div>
+              <div class="text-slate-500 text-xs mt-0.5 whitespace-pre-wrap">${escHtml(r.description)}</div>
+            </td>
+            <td class="p-3 text-right">
+              <div class="flex justify-end gap-1.5 items-center">
+                ${showResolve ? `
+                  <button class="resolve-report-btn bg-red-600 hover:bg-red-700 text-white px-2 py-0.5 rounded text-[11px] font-bold transition-colors" data-id="${r.id}" data-type="${r.target_type}" data-target-id="${r.target_id}">
+                    Action
+                  </button>
+                ` : ''}
+                ${showDismiss ? `
+                  <button class="dismiss-report-btn bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded text-[11px] font-bold transition-colors" data-id="${r.id}">
+                    Dismiss
+                  </button>
+                ` : ''}
+                <span class="${statusClass} px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${showResolve ? 'hidden' : ''}">${r.status}</span>
+              </div>
+            </td>
+          </tr>
+        `;
+    }).join('');
+
+    // Bind resolve actions
+    tbody.querySelectorAll('.resolve-report-btn').forEach(btn => {
+        btn.onclick = async () => {
+            const reportId = btn.getAttribute('data-id');
+            const targetType = btn.getAttribute('data-type');
+            const targetId = btn.getAttribute('data-target-id');
+
+            let confirmMsg = 'Confirm resolve report? This will mark the report as Actioned';
+            if (targetType === 'listing') {
+                confirmMsg += ' and automatically flag the target listing.';
+            } else if (targetType === 'profile') {
+                confirmMsg += ' and flag/restrict the target user.';
+            }
+
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                if (targetType === 'listing') {
+                    const { error: listingError } = await supabase
+                        .from('listings')
+                        .update({ status: 'Flagged' })
+                        .eq('id', targetId);
+                    if (listingError) throw listingError;
+                } else if (targetType === 'profile') {
+                    const { error: profileError } = await supabase
+                        .from('profiles')
+                        .update({ bio: '[FLAGGED ACCOUNT] Abusive or fraudulent behavior reported.' })
+                        .eq('id', targetId);
+                    if (profileError) throw profileError;
+                }
+
+                const { error: reportError } = await supabase
+                    .from('reports')
+                    .update({ status: 'Actioned' })
+                    .eq('id', reportId);
+                if (reportError) throw reportError;
+
+                showEmployeeToast('✓ Report resolved and target actioned');
+                loadReports();
+                if (typeof loadReviewQueue === 'function') loadReviewQueue();
+            } catch (err) {
+                console.error(err);
+                showEmployeeToast(err.message, true);
+            }
+        };
+    });
+
+    // Bind dismiss actions
+    tbody.querySelectorAll('.dismiss-report-btn').forEach(btn => {
+        btn.onclick = async () => {
+            const reportId = btn.getAttribute('data-id');
+            if (!confirm('Are you sure you want to dismiss this report?')) return;
+
+            try {
+                const { error } = await supabase
+                    .from('reports')
+                    .update({ status: 'Dismissed' })
+                    .eq('id', reportId);
+                if (error) throw error;
+
+                showEmployeeToast('✓ Report dismissed');
+                loadReports();
+            } catch (err) {
+                console.error(err);
+                showEmployeeToast(err.message, true);
+            }
+        };
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// Mobile Sidebar Toggle
+const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+const sidebar = document.querySelector('nav');
+const backdrop = document.getElementById('mobile-sidebar-backdrop');
+
+if (mobileMenuBtn && sidebar && backdrop) {
+  function toggleSidebar() {
+    const isOpen = !sidebar.classList.contains('-translate-x-full');
+    if (isOpen) {
+      sidebar.classList.add('-translate-x-full');
+      backdrop.classList.add('opacity-0');
+      setTimeout(() => backdrop.classList.add('hidden'), 300);
+    } else {
+      backdrop.classList.remove('hidden');
+      void backdrop.offsetWidth; // force reflow
+      backdrop.classList.remove('opacity-0');
+      sidebar.classList.remove('-translate-x-full');
+    }
+  }
+
+  mobileMenuBtn.addEventListener('click', toggleSidebar);
+  backdrop.addEventListener('click', toggleSidebar);
+  
+  const sidebarLinks = sidebar.querySelectorAll('a, button');
+  sidebarLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      if (window.innerWidth < 768 && !sidebar.classList.contains('-translate-x-full')) {
+        toggleSidebar();
+      }
+    });
+  });
+}
+
+// Run boot Auth verification
+checkAuth();
+</script>
+<!-- Remarks Modal -->
+<div id="remarks-modal" class="hidden fixed inset-0 z-[100] items-center justify-center bg-black/50 backdrop-blur-sm">
+  <div class="bg-surface-container-lowest rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-outline-variant animate-fade-in">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-outline-variant bg-surface-container-low">
+      <h3 class="font-h3 text-h3 text-primary font-bold text-base" id="remarks-modal-title">Change Status Remarks</h3>
+      <button onclick="closeRemarksModal()" class="text-slate-400 hover:text-slate-700 transition-colors flex items-center justify-center">
+        <span class="material-symbols-outlined text-[24px]">close</span>
+      </button>
+    </div>
+    <div class="p-6">
+      <p class="text-xs text-slate-500 mb-4 font-medium" id="remarks-modal-desc">Please provide remarks/reason for this status change.</p>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Remarks *</label>
+        <textarea id="remarks-input" placeholder="e.g. Rejecting because of incomplete property photos." class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent h-24 resize-none font-medium text-slate-700"></textarea>
+      </div>
+    </div>
+    <div class="px-6 py-4 bg-surface-container-low border-t border-outline-variant flex justify-end gap-3">
+      <button onclick="closeRemarksModal()" class="px-5 py-2 rounded-lg border border-outline-variant text-on-surface-variant text-xs font-medium hover:bg-surface-container transition-colors">Cancel</button>
+      <button id="submit-remarks-btn" class="px-5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors">Submit</button>
+    </div>
+  </div>
+</div>
+
+</body></html>

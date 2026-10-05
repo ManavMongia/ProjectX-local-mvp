@@ -1,0 +1,10 @@
+# Ignore heavy development and personal files during Vercel deployment
+.git
+.agents
+open-design
+node_modules
+dist
+.vercel
+*.mkv
+*.exe
+*.zip
