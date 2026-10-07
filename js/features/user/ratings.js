@@ -524,33 +524,65 @@ export async function renderDealsList(containerId, currentUserId, userRole = 'Br
         const targetUserRole = isBroker ? 'Buyer/Tenant' : 'Broker';
         const propTitle = tx.property_title || tx.listing?.title || 'Property Listing';
         const isCompleted = tx.status === 'completed';
+        const isParticipant = (
+            String(tx.broker_id) === String(currentUserId) ||
+            String(tx.buyer_id)  === String(currentUserId) ||
+            String(tx.seller_id) === String(currentUserId)
+        );
 
-        let ratingActionHtml = '';
+        let actionHtml = '';
         if (isCompleted) {
-            // Check if already rated
+            // Post-deal actions: Rental Agreement + Maintenance + Rating
             const existingRating = await checkRatingEligibility(tx.id, currentUserId, targetUserId);
+            let ratingBtn = '';
             if (existingRating.existingRating) {
                 const r = existingRating.existingRating;
-                ratingActionHtml = `
-                    <div class="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
-                        <span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                ratingBtn = `
+                    <div class="inline-flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-2 py-1 rounded-lg border border-amber-200">
+                        <span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">star</span>
                         <span>Rated ${r.rating}★</span>
                     </div>
                 `;
             } else {
-                ratingActionHtml = `
-                    <button type="button" onclick="window.openRatingModal({ transactionId: '${tx.id}', targetUserId: '${targetUserId}', targetUserName: '${escHtml(targetUserName)}', targetUserRole: '${targetUserRole}', propertyTitle: '${escHtml(propTitle)}' })" class="bg-slate-900 text-white hover:bg-slate-800 px-3.5 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center gap-1 transition-all active:scale-95 shadow-sm cursor-pointer">
-                        <span class="material-symbols-outlined text-[14px] text-amber-400" style="font-variation-settings: 'FILL' 1;">star</span>
-                        Rate ${isBroker ? 'Client' : 'Broker'}
+                ratingBtn = `
+                    <button type="button" onclick="window.openRatingModal({ transactionId: '${tx.id}', targetUserId: '${targetUserId}', targetUserName: '${escHtml(targetUserName)}', targetUserRole: '${targetUserRole}', propertyTitle: '${escHtml(propTitle)}' })" class="bg-slate-900 text-white hover:bg-slate-800 px-3 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider inline-flex items-center gap-1 transition-all active:scale-95 shadow-sm cursor-pointer" title="Rate your deal counterparty">
+                        <span class="material-symbols-outlined text-[13px] text-amber-400" style="font-variation-settings: 'FILL' 1;">star</span>
+                        Rate
                     </button>
                 `;
             }
-        } else {
-            ratingActionHtml = `
-                <span class="text-[11px] font-semibold text-slate-400 italic">
-                    Rating unlocks on completion
-                </span>
+
+            actionHtml = `
+                <div class="flex items-center justify-end gap-1.5 flex-wrap">
+                    <a href="/rental-agreement.html?dealId=${tx.id}" class="text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition-colors" title="View official rental agreement">
+                        <span class="material-symbols-outlined text-[14px]">description</span>
+                        Agreement
+                    </a>
+                    <a href="/maintenance.html?dealId=${tx.id}" class="text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2.5 py-1.5 rounded-lg inline-flex items-center gap-1 transition-colors" title="Manage property maintenance requests">
+                        <span class="material-symbols-outlined text-[14px]">build</span>
+                        Maintenance
+                    </a>
+                    ${ratingBtn}
+                </div>
             `;
+        } else {
+            // Deal is In Progress / Pending
+            if (isParticipant) {
+                actionHtml = `
+                    <div class="flex items-center justify-end gap-2">
+                        <button type="button" onclick="window.handleMarkDealDone('${tx.id}', '${currentUserId}')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider inline-flex items-center gap-1.5 transition-all active:scale-95 shadow-sm cursor-pointer" title="Mark this transaction as completed">
+                            <span class="material-symbols-outlined text-[15px]">check_circle</span>
+                            Mark Deal Done
+                        </button>
+                    </div>
+                `;
+            } else {
+                actionHtml = `
+                    <span class="text-[11px] font-semibold text-slate-400 italic">
+                        In Progress
+                    </span>
+                `;
+            }
         }
 
         const formattedAmount = tx.amount ? `₹${Number(tx.amount).toLocaleString('en-IN')}` : '—';
@@ -584,7 +616,7 @@ export async function renderDealsList(containerId, currentUserId, userRole = 'Br
                     <div class="text-[10px] text-slate-400 mt-1">${dateStr}</div>
                 </td>
                 <td class="p-4 text-right">
-                    ${ratingActionHtml}
+                    ${actionHtml}
                 </td>
             </tr>
         `;
@@ -625,4 +657,31 @@ export async function initProfileRatings({ targetUserId, isOwnProfile, currentUs
     }
 }
 window.initProfileRatings = initProfileRatings;
+
+/**
+ * Global handler for "Mark Deal Done" button
+ */
+window.handleMarkDealDone = async function(transactionId, currentUserId) {
+    if (!confirm('Are you sure you want to mark this transaction as completed?')) return;
+    try {
+        const { acknowledgeDealDone } = await import('../../services/deal-service.js');
+        const role = localStorage.getItem('role') || 'Buyer';
+        const result = await acknowledgeDealDone(transactionId, currentUserId, { role, forceComplete: true });
+        showToast('Deal successfully completed! Rental agreement, maintenance, and reviews are now unlocked.', 'success');
+        
+        // Broadcast events
+        window.dispatchEvent(new CustomEvent('refreshRatingUI'));
+        window.dispatchEvent(new CustomEvent('dealCompleted', { detail: result.tx }));
+
+        // Re-render deals list if present on page
+        if (document.getElementById('profile-deals-tbody')) {
+            await renderDealsList('profile-deals-tbody', currentUserId, role);
+        }
+        if (document.getElementById('broker-deals-tbody')) {
+            await renderDealsList('broker-deals-tbody', currentUserId, 'Broker');
+        }
+    } catch (err) {
+        showToast(err.message || 'Failed to complete deal', 'error');
+    }
+};
 

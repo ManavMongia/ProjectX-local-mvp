@@ -60,6 +60,12 @@ export function initAppPage() {
         initBuyerDetailsPage();
     } else if (currentPage === 'sell.html') {
         initSellPage();
+    } else if (currentPage === 'my-property.html') {
+        import('./js/features/deals/deals.js').then(m => m.initMyPropertyPage());
+    } else if (currentPage === 'rental-agreement.html') {
+        import('./js/features/deals/deals.js').then(m => m.initRentalAgreementPage());
+    } else if (currentPage === 'maintenance.html') {
+        import('./js/features/deals/deals.js').then(m => m.initMaintenancePage());
     }
 
     if (userRole === 'Admin' && currentPage === 'admin-panel.html') {

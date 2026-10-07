@@ -511,54 +511,85 @@ export function seedSampleDealsIfEmpty(activeUserId = null, activeRole = null) {
     const existing = getLocalTransactions();
     if (existing.length > 0) return existing;
 
+    const defaultBrokerId = 'b40658a9-f534-4f58-bd26-6e5943b41b7f';
+    const defaultBuyerId  = 'b260e9ea-1e9d-4938-b2c9-a25809cbdd56';
+    const defaultSellerId = 'e1234567-89ab-cdef-0123-456789abcdef';
+    const currentUserName = localStorage.getItem('userName') || 'Current User';
+
+    const normalizedRole = (activeRole || '').toLowerCase();
+    const isBroker = normalizedRole === 'broker';
+    const isBuyer  = normalizedRole === 'buyer';
+    const isSeller = normalizedRole === 'seller';
+
     const sampleDeals = [
         {
             id: 'tx-mumbai-101',
             listing_id: 210,
             property_title: '1BHK Apartment in Udyog Vihar',
             property_location: 'Udyog Vihar, Mumbai',
-            broker_id: activeUserId && activeRole === 'Broker' ? activeUserId : 'b40658a9-f534-4f58-bd26-6e5943b41b7f', // Akshay Ahuja
-            broker_name: activeUserId && activeRole === 'Broker' ? (localStorage.getItem('userName') || 'Broker') : 'Akshay Ahuja',
-            buyer_id: activeUserId && activeRole === 'Buyer' ? activeUserId : 'b260e9ea-1e9d-4938-b2c9-a25809cbdd56', // Manav / Active Buyer
-            buyer_name: activeUserId && activeRole === 'Buyer' ? (localStorage.getItem('userName') || 'Buyer') : 'Manav',
+            property_img: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=600&q=80',
+            broker_id: isBroker && activeUserId ? activeUserId : defaultBrokerId,
+            broker_name: isBroker && activeUserId ? currentUserName : 'Akshay Ahuja',
+            broker_phone: '+91 98201 12345',
+            buyer_id: isBuyer && activeUserId ? activeUserId : defaultBuyerId,
+            buyer_name: isBuyer && activeUserId ? currentUserName : 'Manav',
+            buyer_phone: '+91 98765 43210',
+            seller_id: isSeller && activeUserId ? activeUserId : defaultSellerId,
+            seller_name: isSeller && activeUserId ? currentUserName : 'Rahul Sharma',
+            seller_phone: '+91 99887 76655',
             transaction_type: 'Rental',
             amount: 142080,
             status: 'completed',
-            closed_at: new Date(Date.now() - 3 * 86400000).toISOString(), // 3 days ago
+            closed_at: new Date(Date.now() - 3 * 86400000).toISOString(),
             created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-            updated_at: new Date(Date.now() - 3 * 86400000).toISOString()
+            updated_at: new Date(Date.now() - 3 * 86400000).toISOString(),
+            deal_acknowledgements: { broker: true, buyer: true, seller: true }
         },
         {
             id: 'tx-mumbai-102',
             listing_id: 211,
             property_title: '2BHK Luxury Apartment in Medavakkam',
             property_location: 'Medavakkam, Mumbai',
-            broker_id: activeUserId && activeRole === 'Broker' ? activeUserId : 'b40658a9-f534-4f58-bd26-6e5943b41b7f',
-            broker_name: activeUserId && activeRole === 'Broker' ? (localStorage.getItem('userName') || 'Broker') : 'Akshay Ahuja',
-            buyer_id: 'f9774926-4ba6-4a23-be64-cebfd643ecca', // buyer
+            property_img: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80',
+            broker_id: isBroker && activeUserId ? activeUserId : defaultBrokerId,
+            broker_name: isBroker && activeUserId ? currentUserName : 'Akshay Ahuja',
+            broker_phone: '+91 98201 12345',
+            buyer_id: 'f9774926-4ba6-4a23-be64-cebfd643ecca',
             buyer_name: 'Priya Sharma',
+            buyer_phone: '+91 91234 56789',
+            seller_id: isSeller && activeUserId ? activeUserId : defaultSellerId,
+            seller_name: isSeller && activeUserId ? currentUserName : 'Rahul Sharma',
+            seller_phone: '+91 99887 76655',
             transaction_type: 'Sale',
             amount: 8500000,
             status: 'completed',
-            closed_at: new Date(Date.now() - 7 * 86400000).toISOString(), // 7 days ago
+            closed_at: new Date(Date.now() - 7 * 86400000).toISOString(),
             created_at: new Date(Date.now() - 18 * 86400000).toISOString(),
-            updated_at: new Date(Date.now() - 7 * 86400000).toISOString()
+            updated_at: new Date(Date.now() - 7 * 86400000).toISOString(),
+            deal_acknowledgements: { broker: true, buyer: true, seller: true }
         },
         {
             id: 'tx-mumbai-103',
             listing_id: 236,
             property_title: '1 BHK Furnished Apartment in Hinjawadi',
             property_location: 'Hinjawadi, Pune',
-            broker_id: '8353f85a-4395-4f3e-b6f5-f62f2fdad4fd', // Broker01
-            broker_name: 'Broker01',
-            buyer_id: activeUserId || 'ef9198f1-0dd7-4eb6-aa46-e679fc4c6bd1',
-            buyer_name: 'Test Buyer',
+            property_img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=600&q=80',
+            broker_id: isBroker && activeUserId ? activeUserId : defaultBrokerId,
+            broker_name: isBroker && activeUserId ? currentUserName : 'Akshay Ahuja',
+            broker_phone: '+91 98201 12345',
+            buyer_id: isBuyer && activeUserId ? activeUserId : defaultBuyerId,
+            buyer_name: isBuyer && activeUserId ? currentUserName : 'Manav',
+            buyer_phone: '+91 98765 43210',
+            seller_id: isSeller && activeUserId ? activeUserId : defaultSellerId,
+            seller_name: isSeller && activeUserId ? currentUserName : 'Rahul Sharma',
+            seller_phone: '+91 99887 76655',
             transaction_type: 'Rental',
             amount: 22000,
-            status: 'pending', // NOT COMPLETED — to test ineligible rating rejection
+            status: 'pending',
             closed_at: null,
             created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-            updated_at: new Date(Date.now() - 2 * 86400000).toISOString()
+            updated_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+            deal_acknowledgements: { broker: false, buyer: false, seller: false }
         }
     ];
 

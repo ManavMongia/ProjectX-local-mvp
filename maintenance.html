@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Property Maintenance — ProjectX</title>
+  <meta name="description" content="Collaborative property maintenance requests for completed ProjectX transactions." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/auth.js"></script>
+  <style>
+    ::-webkit-scrollbar { display: none; }
+    * { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+
+<body class="estate-admin-theme bg-slate-50 text-on-background font-['Outfit'] antialiased min-h-screen flex flex-col">
+
+  <!-- Top Navigation -->
+  <nav class="fixed top-0 w-full z-50 bg-white border-b border-slate-200 shadow-sm h-16 flex items-center">
+    <div class="max-w-[1280px] mx-auto px-6 w-full flex items-center justify-between gap-8">
+      <div class="flex items-center gap-2">
+        <a href="/index.html" class="text-xl font-black tracking-tighter text-slate-900">ProjectX</a>
+      </div>
+      <div class="flex items-center gap-4">
+        <button onclick="window.history.back()" class="text-xs font-bold text-slate-600 hover:text-slate-900 uppercase tracking-wider flex items-center gap-1">
+          <span class="material-symbols-outlined text-[16px]">arrow_back</span> Back
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-[1000px] mx-auto w-full px-4 sm:px-6 pt-24 pb-16">
+
+    <!-- Loading State -->
+    <div id="maint-loading" class="text-center py-20 text-slate-400 font-medium">
+      <span class="material-symbols-outlined text-4xl animate-spin">progress_activity</span>
+      <p class="mt-2 text-sm">Loading property maintenance portal...</p>
+    </div>
+
+    <!-- Error / Security Denied State -->
+    <div id="maint-error" class="hidden bg-white rounded-3xl border border-slate-200 p-8 shadow-sm"></div>
+
+    <!-- Content State -->
+    <div id="maint-content" class="hidden space-y-8">
+
+      <!-- Property Info Bar -->
+      <div class="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-800 text-[10px] font-black uppercase tracking-wider border border-teal-200 flex items-center gap-1">
+              <span class="material-symbols-outlined text-[13px]">handyman</span>
+              Maintenance Portal
+            </span>
+            <span id="maint-deal-id" class="text-xs font-mono text-slate-400"></span>
+          </div>
+          <h1 id="maint-prop-title" class="text-2xl font-black text-slate-900 tracking-tight">Property</h1>
+          <p id="maint-prop-loc" class="text-xs text-slate-500 font-medium flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">location_on</span>
+            Location
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <a id="maint-agreement-link" href="#" class="px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors">
+            <span class="material-symbols-outlined text-[16px]">description</span>
+            View Agreement
+          </a>
+          <button id="create-maint-btn" type="button" class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">add_circle</span>
+            Raise Request
+          </button>
+        </div>
+      </div>
+
+      <!-- Requests Section -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-black text-slate-900">Maintenance Requests</h2>
+        </div>
+
+        <!-- Requests List -->
+        <div id="maint-requests-list" class="space-y-4">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="maint-empty-state" class="hidden text-center py-16 bg-white rounded-3xl border border-slate-200 p-8 shadow-sm">
+          <div class="w-16 h-16 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto mb-4">
+            <span class="material-symbols-outlined text-3xl">task_alt</span>
+          </div>
+          <h3 class="text-lg font-black text-slate-900">No Maintenance Requests</h3>
+          <p class="text-sm text-slate-400 max-w-md mx-auto mt-1 mb-6">
+            There are currently no active maintenance issues reported for this property. If repairs or servicing are required, click "Raise Request".
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Create Request Modal -->
+  <div id="maint-modal" class="hidden fixed inset-0 z-[150] items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-[28px] shadow-2xl w-full max-w-lg mx-auto overflow-hidden border border-slate-100 font-['Outfit']">
+      
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/70">
+        <div>
+          <span class="text-[10px] font-black uppercase tracking-widest text-teal-700 bg-teal-100 px-2 py-0.5 rounded-full">New Ticket</span>
+          <h3 class="text-lg font-black text-slate-900 mt-1">Raise Maintenance Request</h3>
+        </div>
+        <button id="maint-modal-cancel" type="button" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-900 rounded-full hover:bg-slate-100">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Form -->
+      <form id="maint-form" class="p-6 space-y-4">
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1" for="maint-input-title">Issue Title (Required)</label>
+          <input id="maint-input-title" type="text" placeholder="e.g. AC cooling leak in bedroom" maxlength="120" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1" for="maint-input-category">Category</label>
+            <select id="maint-input-category" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none">
+              <option value="Plumbing">Plumbing</option>
+              <option value="Electrical">Electrical</option>
+              <option value="Air Conditioning">Air Conditioning</option>
+              <option value="Carpentry">Carpentry</option>
+              <option value="Appliance">Appliance</option>
+              <option value="Painting">Painting</option>
+              <option value="General" selected>General</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1" for="maint-input-priority">Priority</label>
+            <select id="maint-input-priority" class="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none">
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+              <option value="Urgent">Urgent</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1" for="maint-input-desc">Detailed Description</label>
+          <textarea id="maint-input-desc" rows="4" maxlength="1000" placeholder="Describe the problem, when it started, and any symptoms..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 outline-none focus:border-slate-900 focus:bg-white transition-all resize-none"></textarea>
+        </div>
+
+        <div class="pt-2 flex gap-3">
+          <button type="submit" class="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-sm active:scale-95 cursor-pointer">
+            Submit Request
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <script type="module">
+    import { initMaintenancePage } from './js/features/deals/deals.js';
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initMaintenancePage);
+    } else {
+      initMaintenancePage();
+    }
+  </script>
+</body>
+</html>

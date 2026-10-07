@@ -10,6 +10,9 @@ export const buyerPages = [
     'property-details.html',
     'sell.html',
     'profile.html',
+    'my-property.html',
+    'rental-agreement.html',
+    'maintenance.html',
     'shared-filter.html'
 ];
 
@@ -32,10 +35,10 @@ export const roleHomePage = {
 };
 
 export const roleAllowedPages = {
-    'Admin': ['admin-panel.html', 'employee-panel.html', 'broker-dashboard.html', 'properties.html', 'map.html', 'property-details.html', 'profile.html', 'shared-filter.html'],
-    'Employee': ['employee-panel.html', 'broker-dashboard.html', 'properties.html', 'map.html', 'property-details.html', 'profile.html', 'shared-filter.html'],
-    'Broker': ['broker-dashboard.html', 'properties.html', 'map.html', 'property-details.html', 'profile.html', 'shared-filter.html'],
-    'Seller': ['sell.html', 'broker-dashboard.html', 'properties.html', 'map.html', 'property-details.html', 'profile.html', 'index.html', 'shared-filter.html'],
+    'Admin': ['admin-panel.html', 'employee-panel.html', 'broker-dashboard.html', 'properties.html', 'map.html', 'property-details.html', 'profile.html', 'my-property.html', 'rental-agreement.html', 'maintenance.html', 'shared-filter.html'],
+    'Employee': ['employee-panel.html', 'broker-dashboard.html', 'properties.html', 'map.html', 'property-details.html', 'profile.html', 'my-property.html', 'rental-agreement.html', 'maintenance.html', 'shared-filter.html'],
+    'Broker': ['broker-dashboard.html', 'properties.html', 'map.html', 'property-details.html', 'profile.html', 'rental-agreement.html', 'maintenance.html', 'shared-filter.html'],
+    'Seller': ['sell.html', 'broker-dashboard.html', 'properties.html', 'map.html', 'property-details.html', 'profile.html', 'my-property.html', 'rental-agreement.html', 'maintenance.html', 'index.html', 'shared-filter.html'],
     'Buyer': buyerPages,
     'Guest': guestPages
 };

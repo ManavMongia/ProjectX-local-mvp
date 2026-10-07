@@ -38,7 +38,10 @@ export default defineConfig({
         privacy: 'privacy.html',
         staffLogin: 'staff-login.html',
         sitemap: 'sitemap.html',
-        sharedFilter: 'shared-filter.html'
+        sharedFilter: 'shared-filter.html',
+        myProperty: 'my-property.html',
+        rentalAgreement: 'rental-agreement.html',
+        maintenance: 'maintenance.html'
       }
     }
   }

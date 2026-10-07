@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Rental Agreement — ProjectX</title>
+  <meta name="description" content="Official Tenancy Agreement for completed ProjectX real-estate transactions." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/auth.js"></script>
+  <style>
+    @media print {
+      body { background: white !important; }
+      nav, .no-print { display: none !important; }
+      main { padding: 0 !important; max-width: 100% !important; }
+      .print-border-none { border: none !important; box-shadow: none !important; }
+    }
+  </style>
+</head>
+
+<body class="estate-admin-theme bg-slate-50 text-on-background font-['Outfit'] antialiased min-h-screen flex flex-col">
+
+  <!-- Top Navigation (hidden during print) -->
+  <nav class="fixed top-0 w-full z-50 bg-white border-b border-slate-200 shadow-sm h-16 flex items-center no-print">
+    <div class="max-w-[1280px] mx-auto px-6 w-full flex items-center justify-between gap-8">
+      <div class="flex items-center gap-2">
+        <a href="/index.html" class="text-xl font-black tracking-tighter text-slate-900">ProjectX</a>
+      </div>
+      <div class="flex items-center gap-4">
+        <button onclick="window.history.back()" class="text-xs font-bold text-slate-600 hover:text-slate-900 uppercase tracking-wider flex items-center gap-1">
+          <span class="material-symbols-outlined text-[16px]">arrow_back</span> Back
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-[900px] mx-auto w-full px-4 sm:px-6 pt-24 pb-16">
+
+    <!-- Loading State -->
+    <div id="agreement-loading" class="text-center py-20 text-slate-400 font-medium no-print">
+      <span class="material-symbols-outlined text-4xl animate-spin">progress_activity</span>
+      <p class="mt-2 text-sm">Generating verified rental agreement...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="agreement-error" class="hidden bg-white rounded-3xl border border-slate-200 p-8 shadow-sm"></div>
+
+    <!-- Agreement Document View -->
+    <div id="agreement-content" class="hidden space-y-6">
+
+      <!-- Action Bar (hidden on print) -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm no-print">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-bold border border-emerald-200">
+            <span class="material-symbols-outlined text-[15px] text-emerald-600">verified</span>
+            Legally Binding Record
+          </span>
+          <span class="text-xs text-slate-400 font-mono" id="agr-number"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <a id="agr-maint-link" href="#" class="px-4 py-2 bg-teal-50 hover:bg-teal-100 text-teal-700 border border-teal-200 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors">
+            <span class="material-symbols-outlined text-[16px]">build</span>
+            Maintenance
+          </a>
+          <button id="agr-print-btn" type="button" class="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">print</span>
+            Print / Save PDF
+          </button>
+        </div>
+      </div>
+
+      <!-- Formal Agreement Document Paper -->
+      <div class="bg-white rounded-3xl border border-slate-200 p-8 sm:p-12 shadow-md space-y-8 print-border-none text-slate-800">
+
+        <!-- Document Header -->
+        <div class="text-center pb-8 border-b-2 border-slate-900 space-y-2">
+          <div class="text-xs font-black uppercase tracking-widest text-slate-400">Standard Tenancy Framework</div>
+          <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">RESIDENTIAL RENTAL AGREEMENT</h1>
+          <p class="text-xs text-slate-500 font-medium">Executed via ProjectX Real Estate Transaction Portal · Date: <strong id="agr-date" class="text-slate-800">—</strong></p>
+        </div>
+
+        <!-- Preamble -->
+        <p class="text-xs leading-relaxed text-slate-600">
+          This Agreement of Tenancy is made on the date registered above by and between the Landlord / Property Owner, the Tenant / Occupant, and facilitated by the Authorized Broker named hereunder:
+        </p>
+
+        <!-- Parties Section -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Landlord / Owner -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Landlord (Owner)</span>
+            <div id="agr-owner-name" class="font-bold text-sm text-slate-900">—</div>
+            <div id="agr-owner-phone" class="text-xs text-slate-500">—</div>
+            <div id="agr-owner-email" class="text-xs text-slate-400 font-mono truncate">—</div>
+          </div>
+
+          <!-- Tenant -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Tenant (Occupant)</span>
+            <div id="agr-tenant-name" class="font-bold text-sm text-slate-900">—</div>
+            <div id="agr-tenant-phone" class="text-xs text-slate-500">—</div>
+            <div id="agr-tenant-email" class="text-xs text-slate-400 font-mono truncate">—</div>
+          </div>
+
+          <!-- Broker -->
+          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Facilitating Broker</span>
+            <div id="agr-broker-name" class="font-bold text-sm text-slate-900">—</div>
+            <div id="agr-broker-phone" class="text-xs text-slate-500">—</div>
+            <div id="agr-broker-email" class="text-xs text-slate-400 font-mono truncate">—</div>
+          </div>
+        </div>
+
+        <!-- Property Schedule -->
+        <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3">
+          <h3 class="text-xs font-black uppercase tracking-wider text-slate-500">1. Schedule of the Property</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div>
+              <span class="text-slate-400 block text-[11px] font-bold">Property Description:</span>
+              <span id="agr-prop-title" class="font-bold text-slate-900 text-sm mt-0.5 block">—</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[11px] font-bold">Location & Address:</span>
+              <span id="agr-prop-address" class="font-bold text-slate-900 mt-0.5 block">—</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[11px] font-bold">Property Type:</span>
+              <span id="agr-prop-type" class="font-bold text-slate-900 mt-0.5 block">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Financial Obligations -->
+        <div class="p-5 rounded-2xl bg-slate-50/70 border border-slate-200 space-y-3">
+          <h3 class="text-xs font-black uppercase tracking-wider text-slate-500">2. Rent & Security Deposit Terms</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div>
+              <span class="text-slate-400 block text-[11px] font-bold">Agreed Monthly Rent:</span>
+              <span id="agr-monthly-rent" class="font-black text-slate-900 text-base mt-0.5 block">—</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[11px] font-bold">Refundable Security Deposit:</span>
+              <span id="agr-deposit" class="font-black text-slate-900 text-base mt-0.5 block">—</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[11px] font-bold">Tenancy Term:</span>
+              <span id="agr-term-duration" class="font-bold text-slate-900 mt-0.5 block">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Key Clauses -->
+        <div class="space-y-4 text-xs text-slate-600 leading-relaxed">
+          <h3 class="text-xs font-black uppercase tracking-wider text-slate-500">3. Standard Terms & Conditions</h3>
+          
+          <div class="space-y-3">
+            <div>
+              <strong class="text-slate-800">3.1 Payment:</strong> The Tenant agrees to pay the monthly rental on or before the 5th day of every calendar month into the Landlord's designated bank account.
+            </div>
+            <div>
+              <strong class="text-slate-800">3.2 Maintenance & Repairs:</strong> Routine internal upkeep is managed collaboratively via the ProjectX Maintenance Portal. Minor repairs up to ₹1,000 shall be borne by the Tenant, whereas structural, plumbing, and electrical mains remain the responsibility of the Landlord.
+            </div>
+            <div>
+              <strong class="text-slate-800">3.3 Permitted Use:</strong> The premises shall be utilized strictly for residential purposes and not for commercial activities without prior written consent from the Landlord.
+            </div>
+            <div>
+              <strong class="text-slate-800">3.4 Notice Period & Termination:</strong> Either party may terminate this agreement by providing one (1) full month of written notice to the counterparty.
+            </div>
+          </div>
+        </div>
+
+        <!-- Digital Verification & Signatures -->
+        <div class="pt-8 border-t-2 border-slate-100 space-y-6">
+          <div class="flex items-center gap-2 text-xs font-bold text-emerald-700">
+            <span class="material-symbols-outlined text-[18px]">verified</span>
+            Digitally Authenticated on ProjectX Platform via Multi-Party Confirmation
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 text-center">
+            <div class="p-4 rounded-xl border border-slate-200 space-y-2">
+              <div class="h-10 border-b border-dashed border-slate-300 flex items-center justify-center font-cursive text-slate-700 italic text-sm">
+                Signed Digitally
+              </div>
+              <span class="text-[11px] font-bold text-slate-700 block">Landlord / Owner</span>
+              <span class="text-[10px] text-emerald-600 font-extrabold uppercase">Verified ✓</span>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-200 space-y-2">
+              <div class="h-10 border-b border-dashed border-slate-300 flex items-center justify-center font-cursive text-slate-700 italic text-sm">
+                Signed Digitally
+              </div>
+              <span class="text-[11px] font-bold text-slate-700 block">Tenant / Buyer</span>
+              <span class="text-[10px] text-emerald-600 font-extrabold uppercase">Verified ✓</span>
+            </div>
+
+            <div class="p-4 rounded-xl border border-slate-200 space-y-2">
+              <div class="h-10 border-b border-dashed border-slate-300 flex items-center justify-center font-cursive text-slate-700 italic text-sm">
+                Signed Digitally
+              </div>
+              <span class="text-[11px] font-bold text-slate-700 block">Certified Broker</span>
+              <span class="text-[10px] text-emerald-600 font-extrabold uppercase">Verified ✓</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script type="module">
+    import { initRentalAgreementPage } from './js/features/deals/deals.js';
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initRentalAgreementPage);
+    } else {
+      initRentalAgreementPage();
+    }
+  </script>
+</body>
+</html>
