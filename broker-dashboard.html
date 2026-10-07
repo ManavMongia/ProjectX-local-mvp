@@ -70,10 +70,10 @@
 <span class="material-symbols-outlined text-[20px]">person_search</span>
             <span class="hidden lg:inline">Leads</span>
         </a>
-<!--  <a id="nav-analytics" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-100 rounded-lg hover:text-slate-900 transition-colors justify-center lg:justify-start" href="#analytics-section">
-<span class="material-symbols-outlined text-[20px]">insights</span>
-            <span class="hidden lg:inline">Analytics</span> -->
-        </a>
+<a id="nav-deals" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-100 rounded-lg hover:text-slate-900 transition-colors justify-center lg:justify-start" href="#deals-section">
+    <span class="material-symbols-outlined text-[20px]">handshake</span>
+    <span class="hidden lg:inline">Deals & Ratings</span>
+</a>
 <a id="nav-messages" class="flex items-center justify-center lg:justify-between px-3 py-2.5 text-slate-500 hover:bg-slate-100 rounded-lg hover:text-slate-900 transition-colors w-full" href="#messages-section">
     <div class="flex items-center gap-3">
         <span class="material-symbols-outlined text-[20px]">forum</span>
@@ -128,6 +128,10 @@
   <button type="button" data-tab="#leads-section" aria-label="Leads" aria-selected="false" class="mobile-nav-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-slate-400 transition-colors">
     <span class="material-symbols-outlined text-[22px]">person_search</span>
     <span class="text-[9px] font-black uppercase tracking-widest">Leads</span>
+  </button>
+  <button type="button" data-tab="#deals-section" aria-label="Deals" aria-selected="false" class="mobile-nav-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-slate-400 transition-colors">
+    <span class="material-symbols-outlined text-[22px]">handshake</span>
+    <span class="text-[9px] font-black uppercase tracking-widest">Deals</span>
   </button>
   <button type="button" data-tab="#messages-section" aria-label="Messages" aria-selected="false" class="mobile-nav-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-slate-400 transition-colors relative">
     <span class="material-symbols-outlined text-[22px]">forum</span>
@@ -190,7 +194,7 @@
         </header>
 
         <!-- KPI Bento Grid -->
-        <section class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-stack-lg">
+        <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-stack-lg">
             <!-- KPI Card 1 -->
             <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
                 <div class="flex justify-between items-start mb-stack-md">
@@ -247,6 +251,25 @@
                     </span>
                     <span class="font-body-sm text-body-sm text-on-surface-variant">vs last month</span>
                 </div>
+            </div>
+            <!-- KPI Card 4: Rating -->
+            <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group cursor-pointer" onclick="activateBrokerTab('#deals-section')">
+                <div class="flex justify-between items-start mb-stack-md">
+                    <div>
+                        <p class="font-label-caps text-label-caps text-on-surface-variant mb-1">CLIENT RATING</p>
+                        <h3 id="stat-broker-rating" class="font-h3 text-h3 text-primary flex items-center gap-1.5">
+                            <span id="stat-rating-val">—</span>
+                            <span class="material-symbols-outlined text-amber-400 text-[20px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                        </h3>
+                    </div>
+                    <div class="p-2 bg-amber-50 text-amber-600 rounded-DEFAULT">
+                        <span class="material-symbols-outlined">hotel_class</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span id="stat-rating-count" class="font-body-sm text-body-sm text-on-surface-variant">0 verified reviews</span>
+                </div>
+            </div>
         </section>
 
         <!-- Referral Link Widget -->
@@ -475,6 +498,65 @@
         <section class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-4 md:p-6">
             <div id="notifications-list-container" class="flex flex-col gap-4">
                 <div class="text-center text-slate-400 py-10 font-medium">Loading notifications...</div>
+            </div>
+        </section>
+    </div>
+
+    <!-- TAB: DEALS & RATINGS -->
+    <div id="tab-deals" class="tab-content hidden">
+        <header class="flex flex-col justify-between items-start mb-6 gap-3 lg:flex-row lg:items-center">
+            <div>
+                <h1 class="font-h2 text-h2 text-primary">Deals & Ratings</h1>
+                <p class="font-body-sm text-body-sm text-on-surface-variant mt-unit">Manage verified transactions and submit client reviews.</p>
+            </div>
+        </header>
+
+        <!-- Rating Summary Overview -->
+        <div id="broker-rating-summary-card" class="mb-6"></div>
+
+        <!-- Deals & Transactions Table Section -->
+        <section class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden mb-6">
+            <div class="p-5 border-b border-outline-variant flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                    <h3 class="font-h3 text-h3 text-primary">Completed & Active Transactions</h3>
+                    <p class="text-xs text-on-surface-variant mt-0.5">Rating eligibility is strictly unlocked upon deal completion.</p>
+                </div>
+                <div class="flex items-center gap-2 text-xs font-bold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+                    <span class="material-symbols-outlined text-[16px] text-emerald-600">verified</span>
+                    <span>Verified Platform Escrow</span>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-outline-variant bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                            <th class="p-4">Property / Deal ID</th>
+                            <th class="p-4">Client / Role</th>
+                            <th class="p-4">Type</th>
+                            <th class="p-4">Amount</th>
+                            <th class="p-4">Status / Closed</th>
+                            <th class="p-4 text-right">Rating Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="broker-deals-tbody">
+                        <tr>
+                            <td colspan="6" class="p-8 text-center text-slate-400 text-sm">Loading transactions...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Verified Reviews Section -->
+        <section class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm p-6 mb-6">
+            <div class="mb-5 pb-3 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 class="font-h3 text-h3 text-primary">Client Feedback & Reviews</h3>
+                    <p class="text-xs text-on-surface-variant mt-0.5">Real feedback submitted by buyers and tenants from completed deals.</p>
+                </div>
+            </div>
+            <div id="broker-client-reviews-container">
+                <div class="text-center text-slate-400 py-8 text-sm">Loading client reviews...</div>
             </div>
         </section>
     </div>

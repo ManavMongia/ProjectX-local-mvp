@@ -321,6 +321,48 @@
         </div>
 
 
+        <!-- Rating Eligibility Action Banner -->
+        <div id="eligible-rate-banner-container" class="mb-6"></div>
+
+        <!-- Rating Summary Overview Card -->
+        <div id="profile-rating-summary-card" class="mb-6"></div>
+
+        <!-- Completed Deals & Transactions -->
+        <div id="profile-deals-container" class="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm hover:shadow-md transition-all duration-200 mb-6 hidden">
+          <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h3 class="heading-md">Completed Deals & Transactions</h3>
+              <p class="text-sm text-slate-400 font-medium mt-0.5">Verified property transactions. Rate the other party once closed.</p>
+            </div>
+            <div class="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+              <span class="material-symbols-outlined text-[16px]">verified</span>
+              Platform Verified
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-slate-100 bg-slate-50 text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  <th class="p-4">Property / Deal ID</th>
+                  <th class="p-4">Party</th>
+                  <th class="p-4">Type</th>
+                  <th class="p-4">Amount</th>
+                  <th class="p-4">Status / Closed</th>
+                  <th class="p-4 text-right">Rating Action</th>
+                </tr>
+              </thead>
+              <tbody id="profile-deals-tbody">
+                <tr>
+                  <td colspan="6" class="p-8 text-center text-slate-400 text-sm">Loading transactions...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Verified Reviews List -->
+        <div id="profile-reviews-list-container" class="mb-6"></div>
+
         <!-- Broker Actions Placeholder -->
         <div id="broker-actions-container" class="space-y-6"></div>
 
@@ -330,6 +372,7 @@
 
   <script type="module">
     import { supabase } from './lib/supabase.js';
+    import { initProfileRatings } from './js/features/user/ratings.js';
 
     const STORAGE_KEY = 'buyerProfile';
     let currentProfile = null;
@@ -1420,11 +1463,30 @@
         document.getElementById('profile-display-name').textContent = 'Loading...';
       }
 
+      // Helper to initialize or re-initialize ratings
+      async function setupRatings(prof) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const currentUserId = session?.user?.id;
+          const queryUserId = targetUserId || currentUserId;
+          await initProfileRatings({
+            targetUserId: queryUserId,
+            isOwnProfile: !targetUserId || targetUserId === currentUserId,
+            currentUserId,
+            profileName: prof?.name || 'User',
+            profileRole: prof?.role || 'Buyer'
+          });
+        } catch (rErr) {
+          console.error('Error initializing ratings on profile:', rErr);
+        }
+      }
+
       // 2. Fetch fresh live profile
       loadProfile(targetUserId)
-        .then(freshProfile => {
+        .then(async freshProfile => {
           if (freshProfile) {
             renderProfile(freshProfile);
+            await setupRatings(freshProfile);
           } else if (targetUserId) {
             showToast('User profile not found.', true);
           }
@@ -1443,6 +1505,12 @@
           // Only show error toast if profile data is genuinely missing, not a render error
           if (targetUserId && err?.message?.includes('fetch')) showToast('Failed to load profile.', true);
         });
+
+      // Refresh on rating submission
+      window.addEventListener('refreshRatingUI', async () => {
+        const prof = currentProfile || loadLocalProfile();
+        await setupRatings(prof);
+      });
 
       let isEditing = false;
       const fields = ['field-name', 'field-email', 'field-phone', 'field-city', 'field-bio'];

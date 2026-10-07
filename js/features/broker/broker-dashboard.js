@@ -19,6 +19,13 @@ import {
     currentChatConversation,
     activeChatNames
 } from '../communication/chat.js';
+import {
+    injectRatingModal,
+    renderUserRatingCard,
+    renderUserReviewsList,
+    renderDealsList
+} from '../user/ratings.js';
+import { getUserRatingSummary } from '../../services/rating-service.js';
 
 let globalBrokerChatUnsubscribe = null;
 
@@ -306,6 +313,11 @@ export async function initBrokerDashboardPage() {
     await initCustomFiltersManager();
     await initNotificationsManager();
 
+    // Initialize Deals & Ratings Manager
+    if (session && session.user) {
+        await initBrokerDealsAndRatingsManager(session.user.id);
+    }
+
     // Global Real-time Message Listener for Broker Dashboard
     if (globalBrokerChatUnsubscribe) {
         globalBrokerChatUnsubscribe();
@@ -358,3 +370,45 @@ export async function initBrokerDashboardPage() {
         };
     }
 }
+
+/**
+ * Coordinates Deals and Client Ratings for Broker Dashboard
+ */
+async function initBrokerDealsAndRatingsManager(userId) {
+    if (!userId) return;
+    injectRatingModal();
+
+    async function loadDealsAndRatings() {
+        try {
+            // 1. Update KPI overview
+            const summary = await getUserRatingSummary(userId);
+            const ratingValEl = document.getElementById('stat-rating-val');
+            const ratingCountEl = document.getElementById('stat-rating-count');
+            if (ratingValEl) {
+                ratingValEl.textContent = summary.count > 0 ? summary.average.toFixed(1) : 'No ratings yet';
+            }
+            if (ratingCountEl) {
+                ratingCountEl.textContent = `${summary.count} verified ${summary.count === 1 ? 'review' : 'reviews'}`;
+            }
+
+            // 2. Render rating summary card in tab
+            await renderUserRatingCard('broker-rating-summary-card', userId);
+
+            // 3. Render transactions/deals table
+            await renderDealsList('broker-deals-tbody', userId, 'Broker');
+
+            // 4. Render client reviews list
+            await renderUserReviewsList('broker-client-reviews-container', userId);
+        } catch (err) {
+            console.error('Failed to load broker deals and ratings:', err);
+        }
+    }
+
+    await loadDealsAndRatings();
+
+    // Re-render when a new rating is submitted
+    window.addEventListener('refreshRatingUI', () => {
+        loadDealsAndRatings();
+    });
+}
+

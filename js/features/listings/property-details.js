@@ -19,6 +19,7 @@ import { getListingStatusHistory, hasProfanity } from '../../services/moderation
 import { createInquiry } from '../../services/inquiry-service.js';
 import { renderInteractiveGallery } from './property-media.js';
 import { initBuyerChat } from '../communication/chat.js';
+import { getUserRatingSummary } from '../../services/rating-service.js';
 import { showToast } from '../../ui/toast.js';
 
 function escHtml(str) {
@@ -338,7 +339,35 @@ export async function initBuyerDetailsPage() {
         }
     }
 
-    document.title = `${l.title} — EstatePro`;
+    // Dynamic Verified Rating display
+    const detailRatingEl = document.getElementById('detail-broker-rating-container');
+    if (detailRatingEl) {
+        if (l.broker_id) {
+            const ratingSummary = await getUserRatingSummary(l.broker_id);
+            if (ratingSummary.count > 0) {
+                detailRatingEl.innerHTML = `
+                    <span class="material-symbols-outlined text-[16px] text-amber-400" style="font-variation-settings: 'FILL' 1;">star</span>
+                    <span class="font-black text-slate-900">${ratingSummary.average}</span>
+                    <a href="/profile.html?id=${l.broker_id}#reviews-section" class="text-slate-400 hover:text-slate-700 hover:underline transition-colors font-medium text-xs">
+                        (${ratingSummary.count} verified review${ratingSummary.count === 1 ? '' : 's'})
+                    </a>
+                `;
+            } else {
+                detailRatingEl.innerHTML = `
+                    <span class="text-xs text-slate-400 font-medium flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px] text-slate-300">verified</span>
+                        New Partner · No reviews yet
+                    </span>
+                `;
+            }
+        } else {
+            detailRatingEl.innerHTML = `
+                <span class="text-xs text-slate-400 font-medium">Direct Listing</span>
+            `;
+        }
+    }
+
+    document.title = `${l.title} — ProjectX`;
 
     // Interactive Media Gallery
     const galleryContainer = document.getElementById('property-gallery-container');
