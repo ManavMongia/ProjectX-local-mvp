@@ -26,6 +26,7 @@ export const roleHomePage = {
     'Admin': 'admin-panel.html',
     'Employee': 'employee-panel.html',
     'Broker': 'broker-dashboard.html',
+    'Seller': 'sell.html',
     'Buyer': 'index.html',
     'Guest': 'index.html'
 };
@@ -34,6 +35,7 @@ export const roleAllowedPages = {
     'Admin': ['admin-panel.html', 'employee-panel.html', 'broker-dashboard.html', 'properties.html', 'map.html', 'property-details.html', 'profile.html', 'shared-filter.html'],
     'Employee': ['employee-panel.html', 'broker-dashboard.html', 'properties.html', 'map.html', 'property-details.html', 'profile.html', 'shared-filter.html'],
     'Broker': ['broker-dashboard.html', 'properties.html', 'map.html', 'property-details.html', 'profile.html', 'shared-filter.html'],
+    'Seller': ['sell.html', 'broker-dashboard.html', 'properties.html', 'map.html', 'property-details.html', 'profile.html', 'index.html', 'shared-filter.html'],
     'Buyer': buyerPages,
     'Guest': guestPages
 };

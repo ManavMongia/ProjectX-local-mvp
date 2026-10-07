@@ -390,84 +390,60 @@
   </nav>
 
   <script>
+  (function () {
     function toggleMobileMenu() {
       const menu = document.getElementById('mobile-menu');
       const backdrop = document.getElementById('mobile-menu-backdrop');
+      if (!menu) return;
       if (menu.classList.contains('translate-x-full')) {
         menu.classList.remove('translate-x-full');
-        backdrop.classList.remove('hidden');
-        setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        if (backdrop) {
+          backdrop.classList.remove('hidden');
+          setTimeout(() => backdrop.classList.remove('opacity-0'), 10);
+        }
       } else {
         menu.classList.add('translate-x-full');
-        backdrop.classList.add('opacity-0');
-        setTimeout(() => backdrop.classList.add('hidden'), 300);
+        if (backdrop) {
+          backdrop.classList.add('opacity-0');
+          setTimeout(() => backdrop.classList.add('hidden'), 300);
+        }
       }
     }
 
-    document.getElementById('hamburger-btn').addEventListener('click', toggleMobileMenu);
-    document.getElementById('hamburger-btn').addEventListener('touchend', function(e) {
-      e.preventDefault();
-      toggleMobileMenu();
-    });
-
-  function toggleDropdown(id, event) {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    if (hamburgerBtn) {
+      hamburgerBtn.addEventListener('click', toggleMobileMenu);
+      hamburgerBtn.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        toggleMobileMenu();
+      });
     }
-    const dropdown = document.getElementById(id);
-    if (!dropdown) return;
-    const isVisible = dropdown.classList.contains('opacity-100');
 
-    ['property-dropdown', 'price-dropdown'].forEach(d => {
-      const el = document.getElementById(d);
-      if (el) {
-        el.classList.add('opacity-0', 'invisible');
-        el.classList.remove('opacity-100', 'visible');
+    function toggleDropdown(id, event) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
       }
-    });
+      const dropdown = document.getElementById(id);
+      if (!dropdown) return;
+      const isVisible = dropdown.classList.contains('opacity-100');
 
-    if (!isVisible) {
-      dropdown.classList.remove('opacity-0', 'invisible');
-      dropdown.classList.add('opacity-100', 'visible');
+      ['property-dropdown', 'price-dropdown'].forEach(d => {
+        const el = document.getElementById(d);
+        if (el) {
+          el.classList.add('opacity-0', 'invisible');
+          el.classList.remove('opacity-100', 'visible');
+        }
+      });
+
+      if (!isVisible) {
+        dropdown.classList.remove('opacity-0', 'invisible');
+        dropdown.classList.add('opacity-100', 'visible');
+      }
     }
-  }
 
-  // Close dropdowns when clicking outside
-  document.addEventListener('click', () => {
-    ['property-dropdown', 'price-dropdown'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) {
-        el.classList.add('opacity-0', 'invisible');
-        el.classList.remove('opacity-100', 'visible');
-      }
-    });
-  });
-
-  // Wire dropdowns for both click and touch
-  const propertyTrigger = document.getElementById('property-trigger');
-  const priceTrigger = document.getElementById('price-trigger');
-
-  if (propertyTrigger) {
-    propertyTrigger.addEventListener('click', (e) => toggleDropdown('property-dropdown', e));
-    propertyTrigger.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      toggleDropdown('property-dropdown', e);
-    });
-  }
-
-  if (priceTrigger) {
-    priceTrigger.addEventListener('click', (e) => toggleDropdown('price-dropdown', e));
-    priceTrigger.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      toggleDropdown('price-dropdown', e);
-    });
-  }
-
-  // Close on outside touch
-  document.addEventListener('touchend', (e) => {
-    if (!e.target.closest('#property-trigger') && !e.target.closest('#property-dropdown') &&
-        !e.target.closest('#price-trigger') && !e.target.closest('#price-dropdown')) {
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', () => {
       ['property-dropdown', 'price-dropdown'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
@@ -475,8 +451,42 @@
           el.classList.remove('opacity-100', 'visible');
         }
       });
+    });
+
+    // Wire dropdowns for both click and touch
+    const propertyTrigger = document.getElementById('property-trigger');
+    const priceTrigger = document.getElementById('price-trigger');
+
+    if (propertyTrigger) {
+      propertyTrigger.addEventListener('click', (e) => toggleDropdown('property-dropdown', e));
+      propertyTrigger.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        toggleDropdown('property-dropdown', e);
+      });
     }
-  });
+
+    if (priceTrigger) {
+      priceTrigger.addEventListener('click', (e) => toggleDropdown('price-dropdown', e));
+      priceTrigger.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        toggleDropdown('price-dropdown', e);
+      });
+    }
+
+    // Close on outside touch
+    document.addEventListener('touchend', (e) => {
+      if (!e.target.closest('#property-trigger') && !e.target.closest('#property-dropdown') &&
+          !e.target.closest('#price-trigger') && !e.target.closest('#price-dropdown')) {
+        ['property-dropdown', 'price-dropdown'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.classList.add('opacity-0', 'invisible');
+            el.classList.remove('opacity-100', 'visible');
+          }
+        });
+      }
+    });
+  })();
   </script>
 </body>
 </html>

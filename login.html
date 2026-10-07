@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-  <title>EstatePro - Sign In</title>
+  <title>ProjectX - Sign In & Sign Up</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&amp;display=swap"
     rel="stylesheet" />
   <link
@@ -23,19 +23,11 @@
       scrollbar-width: none;
     }
 
-    .role-tab-active {
-      background: white;
-      color: #091426;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      border-radius: 6px;
+    .account-type-card {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-
-    .role-tab-inactive {
-      color: #45474c;
-    }
-
-    #name-field {
-      display: none;
+    .account-type-card:hover {
+      transform: translateY(-1px);
     }
   </style>
   <link rel="stylesheet" href="/style.css">
@@ -45,110 +37,254 @@
 <body class="bg-background text-on-background font-body-md antialiased min-h-screen flex flex-col relative">
   <!-- Staff Portal Icon -->
   <a href="/staff-login.html"
-    class="absolute top-6 right-6 z-50 text-slate-400 hover:text-slate-900 bg-white/50 hover:bg-white rounded-full p-2 backdrop-blur transition-all shadow-sm flex items-center justify-center"
+    class="absolute top-6 right-6 z-50 text-slate-400 hover:text-slate-900 bg-white/70 hover:bg-white rounded-full p-2.5 backdrop-blur transition-all shadow-sm flex items-center justify-center border border-slate-200/60"
     title="Staff Portal">
-    <span class="material-symbols-outlined text-[24px]">admin_panel_settings</span>
+    <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
   </a>
+
   <main class="flex-grow flex w-full">
     <!-- Left Side: Immersive Imagery -->
     <div class="hidden lg:flex lg:w-1/2 relative bg-surface-variant overflow-hidden">
       <div class="absolute inset-0 bg-cover bg-center"
-        style="background-image: url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80');">
+        style="background-image: url('https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80');">
       </div>
-      <div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/40 to-transparent"></div>
-      <div class="absolute bottom-0 left-0 p-margin-desktop text-on-primary max-w-lg z-10 space-y-stack-md">
-        <div class="flex items-center gap-2 mb-stack-lg">
-          <span class="material-symbols-outlined text-[32px]">domain</span>
-          <span class="font-h3 text-h3 tracking-tighter font-black">EstatePro</span>
+      <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent"></div>
+      <div class="absolute bottom-0 left-0 p-12 text-white max-w-lg z-10 space-y-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[24px] text-white">domain</span>
+          </div>
+          <span class="text-2xl tracking-tighter font-black">ProjectX</span>
         </div>
-        <h1 class="font-h1 text-h1 text-on-primary">India's Premier Property Platform.</h1>
-        <p class="font-body-lg text-body-lg text-inverse-primary opacity-90">Access for brokers, buyers, and
-          administrative staff across Mumbai & Delhi.</p>
+        <h1 class="text-4xl font-extrabold tracking-tight text-white leading-tight">India's Premier Real-Estate Platform.</h1>
+        <p class="text-base text-slate-200 font-normal leading-relaxed opacity-90">
+          Tailored portal experiences for property buyers, sellers, and certified brokers across Mumbai, Delhi NCR, and Bengaluru.
+        </p>
+        <div class="flex items-center gap-6 pt-2 text-xs text-slate-300 font-medium">
+          <div class="flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px] text-emerald-400">verified</span>
+            <span>Verified Properties</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px] text-emerald-400">shield</span>
+            <span>Direct Owners</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px] text-emerald-400">handshake</span>
+            <span>Licensed Brokers</span>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- Right Side: Interaction Canvas -->
-    <div class="w-full lg:w-1/2 flex items-center justify-center p-margin-mobile lg:p-margin-desktop bg-surface">
-      <div class="w-full max-w-[440px] space-y-stack-lg">
+    <div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-10 lg:p-12 bg-surface">
+      <div class="w-full max-w-[460px] space-y-6">
 
         <!-- Mobile Logo -->
-        <div class="lg:hidden flex items-center gap-2 justify-center mb-stack-lg">
-          <span class="material-symbols-outlined text-primary text-[28px]">domain</span>
-          <span class="font-h3 text-h3 tracking-tighter text-primary font-black">EstatePro</span>
+        <div class="lg:hidden flex items-center gap-2.5 justify-center mb-2">
+          <div class="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white">
+            <span class="material-symbols-outlined text-[22px]">domain</span>
+          </div>
+          <span class="text-2xl tracking-tighter text-slate-900 font-black">ProjectX</span>
         </div>
 
         <!-- Header -->
-        <div class="text-center space-y-2">
-          <h2 id="form-title" class="text-4xl font-black text-slate-900 tracking-tight">
+        <div class="text-center space-y-1.5">
+          <h2 id="form-title" class="text-3xl font-black text-slate-900 tracking-tight">
             Welcome
           </h2>
-          <p class="text-slate-500 font-medium">Access your personalized real estate portal.</p>
+          <p id="form-subtitle" class="text-slate-500 font-medium text-sm">
+            India's modern real-estate platform
+          </p>
         </div>
 
-        <!-- Role Selection Tabs -->
-        <div id="role-tabs" class="flex p-1 bg-slate-100 rounded-xl gap-1">
-          <button
-            class="flex-1 py-2.5 px-3 text-center text-[10px] font-black uppercase tracking-widest rounded-lg role-tab-inactive hover:text-slate-900 transition-colors">Buyer</button>
-          <button
-            class="flex-1 py-2.5 px-3 text-center text-[10px] font-black uppercase tracking-widest rounded-lg role-tab-inactive hover:text-slate-900 transition-colors">Broker</button>
+        <!-- Account Type Selection Section -->
+        <div id="account-type-selection" class="space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Who are you?</span>
+            <span id="role-pill-badge" class="px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-full bg-slate-900 text-white">
+              Buyer Portal
+            </span>
+          </div>
+
+          <!-- 3-Role Grid -->
+          <div id="account-type-grid" class="grid grid-cols-3 gap-2.5">
+            <!-- Buyer Card -->
+            <button type="button" data-role="Buyer"
+              class="account-type-card group relative p-3 text-left rounded-xl border border-slate-900 bg-slate-900/5 ring-1 ring-slate-900 text-slate-900 shadow-sm cursor-pointer flex flex-col justify-between h-24">
+              <div class="flex items-start justify-between w-full">
+                <span class="role-main-icon material-symbols-outlined text-[22px] text-slate-900">home</span>
+                <span class="role-check-indicator material-symbols-outlined text-[16px] text-slate-900">check_circle</span>
+              </div>
+              <div>
+                <div class="font-extrabold text-xs text-slate-900 tracking-tight">Buyer</div>
+                <div class="text-[10px] text-slate-500 leading-tight mt-0.5 truncate">Find & buy homes</div>
+              </div>
+            </button>
+
+            <!-- Seller Card -->
+            <button type="button" data-role="Seller"
+              class="account-type-card group relative p-3 text-left rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-slate-300 cursor-pointer flex flex-col justify-between h-24">
+              <div class="flex items-start justify-between w-full">
+                <span class="role-main-icon material-symbols-outlined text-[22px] text-slate-400">sell</span>
+                <span class="role-check-indicator material-symbols-outlined text-[16px] text-slate-900 hidden">check_circle</span>
+              </div>
+              <div>
+                <div class="font-extrabold text-xs text-slate-900 tracking-tight">Seller</div>
+                <div class="text-[10px] text-slate-500 leading-tight mt-0.5 truncate">List & sell</div>
+              </div>
+            </button>
+
+            <!-- Broker Card -->
+            <button type="button" data-role="Broker"
+              class="account-type-card group relative p-3 text-left rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-slate-300 cursor-pointer flex flex-col justify-between h-24">
+              <div class="flex items-start justify-between w-full">
+                <span class="role-main-icon material-symbols-outlined text-[22px] text-slate-400">domain</span>
+                <span class="role-check-indicator material-symbols-outlined text-[16px] text-slate-900 hidden">check_circle</span>
+              </div>
+              <div>
+                <div class="font-extrabold text-xs text-slate-900 tracking-tight">Broker</div>
+                <div class="text-[10px] text-slate-500 leading-tight mt-0.5 truncate">Manage deals</div>
+              </div>
+            </button>
+          </div>
+
+          <!-- Dynamic Role Description Box -->
+          <div id="role-description-box" class="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-2.5 text-xs text-slate-600">
+            <span class="material-symbols-outlined text-[18px] text-slate-400 shrink-0">info</span>
+            <span id="role-description-text" class="flex-1 text-[11px] leading-relaxed font-medium text-slate-600">
+              Find your next home and explore verified residential and commercial properties.
+            </span>
+          </div>
         </div>
 
-        <!-- Sign In Form -->
-        <form class="space-y-6">
-          <div id="name-field" style="display: none;">
-            <label id="name-label"
-              class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Company/Full
-              Name</label>
-            <input type="text" id="input-name" placeholder="Your name/Company name"
-              class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-slate-900 transition-colors font-medium">
-          </div>
+        <!-- Auth Alert Notification Banner -->
+        <div id="auth-alert" class="hidden flex items-start gap-3 p-3.5 rounded-xl text-xs font-semibold border transition-all mb-4 bg-rose-50 border-rose-200 text-rose-800">
+          <span class="material-symbols-outlined text-[18px] shrink-0 mt-0.5 text-rose-600">error</span>
+          <span class="alert-text flex-1"></span>
+        </div>
 
-          <div>
-            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Email
-              Address</label>
-            <input type="email" id="input-email" placeholder="Email"
-              class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-slate-900 transition-colors font-medium">
-          </div>
-
-          <div>
-            <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Password</label>
-            <input type="password" id="input-password" placeholder="••••••••"
-              class="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-slate-900 transition-colors font-medium">
-          </div>
-
-          <button id="sign-in-btn" type="button"
-            class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-colors shadow-lg active:scale-[0.98]">
-            Sign In
-          </button>
-
-          <div class="text-center mt-4 mb-2">
-            <p class="text-sm text-slate-500 font-medium" id="mode-text">Don't have an account? <button
-                id="toggle-mode-btn" type="button" class="font-bold text-slate-900 hover:underline ml-1">Sign
-                Up</button></p>
-          </div>
-
-          <div class="relative py-4">
-            <div class="absolute inset-0 flex items-center">
-              <div class="w-full border-t border-slate-100"></div>
+        <!-- Form Elements -->
+        <form class="space-y-4" onsubmit="return false;">
+          <!-- Full Name (Signup only) -->
+          <div id="name-field" style="display: none;" class="space-y-1.5">
+            <label id="name-label" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Full Name
+            </label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-slate-400">person</span>
+              <input type="text" id="input-name" placeholder="e.g. Rahul Sharma"
+                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-slate-900 focus:bg-white transition-all text-sm font-medium text-slate-900 placeholder-slate-400" />
             </div>
-            <div class="relative flex justify-center text-[10px]"><span
-                class="px-4 bg-white text-slate-400 font-black uppercase tracking-widest">or</span></div>
           </div>
 
-          <button id="guest-btn" type="button"
-            class="w-full py-4 rounded-2xl text-slate-500 font-bold text-sm hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
-            Just browsing? Enter as a Guest
+          <!-- Phone Number (Signup only, optional) -->
+          <div id="phone-field" style="display: none;" class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Phone Number</label>
+              <span class="text-[10px] text-slate-400 font-medium">Optional</span>
+            </div>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-slate-400">call</span>
+              <input type="tel" id="input-phone" placeholder="+91 98765 43210"
+                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-slate-900 focus:bg-white transition-all text-sm font-medium text-slate-900 placeholder-slate-400" />
+            </div>
+          </div>
+
+          <!-- Email Address -->
+          <div id="email-field" class="space-y-1.5">
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              Email Address
+            </label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-slate-400">mail</span>
+              <input type="email" id="input-email" placeholder="name@example.com"
+                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-slate-900 focus:bg-white transition-all text-sm font-medium text-slate-900 placeholder-slate-400"
+                autocomplete="email" />
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div id="password-field" class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Password</label>
+              <button type="button" id="forgot-password-link" class="text-[11px] font-bold text-slate-900 hover:underline cursor-pointer">
+                Forgot Password?
+              </button>
+            </div>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-slate-400">lock</span>
+              <input type="password" id="input-password" placeholder="••••••••"
+                class="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-slate-900 focus:bg-white transition-all text-sm font-medium text-slate-900 placeholder-slate-400"
+                autocomplete="current-password" />
+              <button type="button" id="toggle-password-btn" aria-label="Toggle password visibility"
+                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 flex items-center justify-center p-0.5 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">visibility</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Confirm Password (Signup only) -->
+          <div id="confirm-password-field" style="display: none;" class="space-y-1.5">
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Confirm Password</label>
+            <div class="relative">
+              <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-slate-400">lock_reset</span>
+              <input type="password" id="input-confirm-password" placeholder="••••••••"
+                class="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-slate-900 focus:bg-white transition-all text-sm font-medium text-slate-900 placeholder-slate-400"
+                autocomplete="new-password" />
+              <button type="button" id="toggle-confirm-password-btn" aria-label="Toggle confirm password visibility"
+                class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 flex items-center justify-center p-0.5 cursor-pointer">
+                <span class="material-symbols-outlined text-[18px]">visibility</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Back to Login button (Shown in Forgot mode) -->
+          <button type="button" id="back-to-login-btn" style="display: none;"
+            class="w-full py-2.5 text-xs font-bold text-slate-600 hover:text-slate-900 flex items-center justify-center gap-1.5 cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+            Back to Sign In
           </button>
+
+          <!-- Primary Submit Button -->
+          <button id="sign-in-btn" type="button"
+            class="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold uppercase tracking-wider text-xs hover:bg-slate-800 transition-all shadow-md active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer">
+            Sign In as Buyer
+          </button>
+
+          <!-- Mode Switch Footer -->
+          <div class="text-center pt-2">
+            <p class="text-xs text-slate-500 font-medium" id="mode-text">
+              Don't have an account? <button id="toggle-mode-btn" type="button" class="font-bold text-slate-900 hover:underline ml-1 cursor-pointer">Sign Up</button>
+            </p>
+          </div>
+
+          <!-- Guest Access Divider & Button -->
+          <div id="guest-container" class="pt-3">
+            <div class="relative py-2">
+              <div class="absolute inset-0 flex items-center">
+                <div class="w-full border-t border-slate-200"></div>
+              </div>
+              <div class="relative flex justify-center text-[10px]">
+                <span class="px-3 bg-white text-slate-400 font-bold uppercase tracking-widest">or</span>
+              </div>
+            </div>
+
+            <button id="guest-btn" type="button"
+              class="w-full py-3 rounded-xl text-slate-600 hover:text-slate-900 font-bold text-xs hover:bg-slate-50 transition-all border border-slate-200 flex items-center justify-center gap-2 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">explore</span>
+              Just browsing? Enter as a Guest
+            </button>
+          </div>
         </form>
 
-
-        <p class="text-center font-body-sm text-[13px] text-on-surface-variant mt-4">
-          By proceeding, you agree to our <a class="text-primary hover:underline font-medium" href="/terms.html">Terms
-            of Service</a> and <a class="text-primary hover:underline font-medium" href="/privacy.html">Privacy
-            Policy</a>.
+        <p class="text-center text-[11px] text-slate-400 mt-4 leading-normal">
+          By proceeding, you agree to our <a class="text-slate-700 hover:underline font-medium" href="/terms.html">Terms of Service</a> and <a class="text-slate-700 hover:underline font-medium" href="/privacy.html">Privacy Policy</a>.
         </p>
       </div>
     </div>
+
     <!-- Referral Invite Screen -->
     <div id="invite-screen" class="hidden w-full min-h-screen flex items-center justify-center bg-[#f8f9fa] px-6">
       <div class="max-w-md w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-10 space-y-6 text-center">
@@ -173,7 +309,7 @@
 
         <!-- e) CTA button -->
         <button id="invite-cta-btn"
-          class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-colors shadow-lg active:scale-[0.98]">
+          class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-colors shadow-lg active:scale-[0.98] cursor-pointer">
           Create Broker Account →
         </button>
 
@@ -185,8 +321,6 @@
       </div>
     </div>
   </main>
-
-
 
   <script type="module">
     import { supabase } from '/lib/supabase.js';
@@ -240,9 +374,9 @@
         // Trigger Sign Up mode — click the toggle-mode-btn
         document.getElementById('toggle-mode-btn').click();
 
-        // Pre-select Broker tab — it's the second button in #role-tabs
-        const brokerTab = document.querySelectorAll('#role-tabs button')[1];
-        if (brokerTab) brokerTab.click();
+        // Pre-select Broker card
+        const brokerCard = document.querySelector('[data-role="Broker"]') || document.querySelectorAll('.account-type-card')[2];
+        if (brokerCard) brokerCard.click();
       });
     }
   </script>

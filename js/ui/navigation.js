@@ -83,6 +83,37 @@ export function updateHeaderVisibility() {
                     </button>
                 `;
             }
+        } else if (currentRole === 'Seller') {
+            if (isMobileContainer) {
+                container.innerHTML = `
+                    <a href="${toAppUrl('sell.html')}" class="w-full text-center bg-slate-900 text-white px-5 py-3 rounded-xl font-bold text-xs hover:bg-slate-800 transition-colors uppercase tracking-wider shadow-sm flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">sell</span>
+                        Sell Property
+                    </a>
+                    <a href="${toAppUrl('broker-dashboard.html')}" class="w-full text-center border border-slate-200 text-slate-700 px-5 py-3 rounded-xl font-bold text-xs hover:bg-slate-50 transition-colors uppercase tracking-wider flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">dashboard</span>
+                        My Listings
+                    </a>
+                    <button onclick="window.logout()" class="w-full text-center bg-slate-100 text-slate-700 px-5 py-3 rounded-xl font-bold text-xs hover:bg-slate-200 transition-colors uppercase tracking-wider flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">logout</span>
+                        Sign Out
+                    </button>
+                `;
+            } else {
+                container.innerHTML = `
+                    <a href="${toAppUrl('sell.html')}" class="bg-slate-900 text-white px-5 py-2 rounded-lg font-bold text-xs hover:bg-slate-800 transition-colors uppercase tracking-wider shadow-sm mr-2 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">sell</span>
+                        Sell Property
+                    </a>
+                    <a href="${toAppUrl('broker-dashboard.html')}" class="text-slate-600 hover:text-slate-900 font-bold text-xs uppercase tracking-wider px-3 py-2 inline-flex items-center gap-1" title="Manage your listings">
+                        <span class="material-symbols-outlined text-[18px]">dashboard</span>
+                        Dashboard
+                    </a>
+                    <button onclick="window.logout()" class="text-slate-500 hover:text-slate-900 transition-colors flex items-center ml-2" title="Signed in as Seller — Sign Out">
+                        <span class="material-symbols-outlined text-[24px]">logout</span>
+                    </button>
+                `;
+            }
         } else {
             if (isMobileContainer) {
                 container.innerHTML = `

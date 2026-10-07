@@ -55,7 +55,7 @@ export function updateReferralBanner(isSignUp, referrerInfo) {
     }
 }
 
-export async function processSignUp({ email, password, name, selectedRole, referrerId }) {
+export async function processSignUp({ email, password, name, phone, selectedRole, referrerId }) {
     const data = await signUp(email, password);
 
     if (data.user) {
@@ -64,6 +64,9 @@ export async function processSignUp({ email, password, name, selectedRole, refer
             full_name: name,
             role: selectedRole
         };
+        if (phone) {
+            profileData.phone = phone;
+        }
         const referredBy = referrerId || getReferredBy();
         if (referredBy) {
             profileData.referred_by = referredBy;

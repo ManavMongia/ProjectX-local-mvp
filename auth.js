@@ -48,7 +48,7 @@ export function initAppPage() {
 
     if (isLoginPage) {
         initLoginPage();
-    } else if (userRole === 'Broker' && currentPage === 'broker-dashboard.html') {
+    } else if ((userRole === 'Broker' || userRole === 'Seller') && currentPage === 'broker-dashboard.html') {
         initBrokerDashboardPage();
     } else if (currentPage === 'index.html') {
         initBuyerHomePage();
