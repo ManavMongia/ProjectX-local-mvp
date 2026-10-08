@@ -13,7 +13,10 @@ import {
     normalizeBrokerageType,
     calculateListingAge,
     isListingVerified,
-    renderListingVerificationBadge
+    renderListingVerificationBadge,
+    isListingSoldOut,
+    markListingSoldOut,
+    formatListingStatus
 } from '../../services/listing-service.js';
 import { getListingMedia, saveListingMediaRows, MEDIA_PLACEHOLDER } from '../../services/media-service.js';
 import { logListingStatusChange, sendBrokerNotification } from '../../services/notification-service.js';
@@ -152,11 +155,20 @@ export function generateListingsHTML(listings, showViews) {
     if (!listings.length) return '<tr><td colspan="6" class="p-8 text-center text-slate-400">No listings found. Click "Add Listing" to start.</td></tr>';
     
     return listings.map(l => {
+        const isSoldOut = isListingSoldOut(l);
         let badgeClass = 'bg-surface-container-high text-on-surface-variant';
-        if (l.status === 'Active') badgeClass = 'bg-secondary-fixed text-on-secondary-fixed-variant';
-        else if (l.status === 'Pending') badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
-        else if (l.status === 'Flagged') badgeClass = 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
-        else if (l.status === 'Sold') badgeClass = 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300';
+        let statusDisplay = formatListingStatus(l.status);
+
+        if (isSoldOut) {
+            badgeClass = 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 font-black';
+            statusDisplay = 'Sold Out';
+        } else if (l.status === 'Active') {
+            badgeClass = 'bg-secondary-fixed text-on-secondary-fixed-variant';
+        } else if (l.status === 'Pending') {
+            badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
+        } else if (l.status === 'Flagged') {
+            badgeClass = 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
+        }
 
         const age = calculateListingAge(l.created_at);
 
@@ -173,7 +185,7 @@ export function generateListingsHTML(listings, showViews) {
           </td>
           <td class="p-4">
             <div class="flex flex-col gap-1 items-start">
-              <span class="${badgeClass} px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">${l.status}</span>
+              <span class="${badgeClass} px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">${statusDisplay}</span>
               ${renderListingVerificationBadge(isListingVerified(l))}
             </div>
           </td>
@@ -184,7 +196,16 @@ export function generateListingsHTML(listings, showViews) {
             <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wide">${age.label}</div>
           </td>
           <td class="p-4 text-right">
-            <div class="flex justify-end gap-2">
+            <div class="flex items-center justify-end gap-2">
+              ${isSoldOut ? `
+                <span class="px-2.5 py-1 text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 rounded-lg inline-flex items-center gap-1 cursor-default" title="Already marked as Sold Out">
+                  <span class="material-symbols-outlined text-[15px]">check_circle</span> Sold Out
+                </span>
+              ` : `
+                <button onclick="confirmMarkListingSoldOut(${l.id}, '${escHtml(l.title).replace(/'/g, "\\'")}')" class="px-2.5 py-1 text-xs font-bold text-amber-800 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors inline-flex items-center gap-1 shadow-xs" title="Mark as Sold Out">
+                  <span class="material-symbols-outlined text-[15px]">do_not_disturb_on</span> Mark as Sold Out
+                </button>
+              `}
               <button onclick="shareListing(${l.id})" class="p-1.5 text-on-surface-variant hover:text-primary rounded hover:bg-surface-container" title="Share">
                 <span class="material-symbols-outlined text-[20px]">share</span>
               </button>
@@ -212,6 +233,20 @@ export async function deleteListing(id) {
     }
 }
 window.deleteListing = deleteListing;
+
+export async function confirmMarkListingSoldOut(id, title) {
+    const confirmMsg = `Mark this listing as Sold Out?\n\nThis will indicate that the property is no longer available.`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+        await markListingSoldOut(id);
+        showToast('✓ Listing marked as Sold Out');
+        await renderListings();
+    } catch (err) {
+        showToast(err.message || 'Failed to mark listing as Sold Out', true);
+    }
+}
+window.confirmMarkListingSoldOut = confirmMarkListingSoldOut;
 
 export function shareListing(id) {
     const url = window.location.origin + '/property-details.html?id=' + id;
@@ -315,8 +350,8 @@ export async function openListingModal(id) {
     if (statusSelect) {
         statusSelect.innerHTML = '';
         const allowedStatuses = userRole === 'Broker' 
-            ? ['Draft', 'Pending', 'Sold']
-            : ['Draft', 'Pending', 'Under Review', 'Active', 'Rejected', 'Suspended', 'Sold'];
+            ? ['Draft', 'Pending', 'Active', 'sold_out']
+            : ['Draft', 'Pending', 'Under Review', 'Active', 'Rejected', 'Suspended', 'sold_out'];
         
         const currentStatus = listing ? listing.status : (userRole === 'Broker' ? 'Draft' : 'Active');
         const finalStatuses = [...allowedStatuses];
@@ -327,7 +362,7 @@ export async function openListingModal(id) {
         finalStatuses.forEach(s => {
             const opt = document.createElement('option');
             opt.value = s;
-            opt.textContent = s === 'Active' ? 'Approved' : s;
+            opt.textContent = s === 'Active' ? 'Approved' : (isListingSoldOut(s) ? 'Sold Out' : s);
             statusSelect.appendChild(opt);
         });
         statusSelect.value = currentStatus;

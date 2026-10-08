@@ -218,3 +218,129 @@ export function renderListingVerificationBadge(isVerified, { compact = false } =
     `.trim();
 }
 
+// ── Listing Sold Out Utilities & Operations ──
+
+/**
+ * Checks whether a listing is marked as Sold Out.
+ * Supports 'sold_out', 'sold out', and legacy 'sold' case-insensitively.
+ *
+ * @param {Object|string} listingOrStatus
+ * @returns {boolean}
+ */
+export function isListingSoldOut(listingOrStatus) {
+    if (!listingOrStatus) return false;
+    const s = typeof listingOrStatus === 'string'
+        ? listingOrStatus.trim().toLowerCase()
+        : String(listingOrStatus.status || '').trim().toLowerCase();
+    return s === 'sold_out' || s === 'sold out' || s === 'sold';
+}
+
+/**
+ * Normalizes display label for listing status.
+ *
+ * @param {string} status
+ * @returns {string}
+ */
+export function formatListingStatus(status) {
+    if (!status) return 'Draft';
+    if (isListingSoldOut(status)) return 'Sold Out';
+    const s = status.toLowerCase();
+    if (s === 'active') return 'Active';
+    if (s === 'pending') return 'Pending';
+    if (s === 'flagged') return 'Flagged';
+    if (s === 'draft') return 'Draft';
+    return status;
+}
+
+/**
+ * Renders consistent HTML badge for Sold Out state.
+ *
+ * @param {boolean} isSoldOut
+ * @returns {string}
+ */
+export function renderListingSoldOutBadge(isSoldOut) {
+    if (!isSoldOut) return '';
+    return `
+        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-600 text-white shadow-xs" title="Property is no longer available">
+            <span class="material-symbols-outlined text-[13px]">do_not_disturb_on</span>
+            <span>SOLD OUT</span>
+        </span>
+    `.trim();
+}
+
+/**
+ * Marks a listing as Sold Out with strict broker/owner authorization checks.
+ *
+ * @param {string|number} listingId
+ * @returns {Promise<Object>}
+ */
+export async function markListingSoldOut(listingId) {
+    if (!listingId) {
+        throw new Error('Listing ID is required to mark listing as Sold Out.');
+    }
+
+    // 1. Validate current authenticated user
+    let user = null;
+    try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+            user = userData.user;
+        } else {
+            const { data: sessionData } = await supabase.auth.getSession();
+            user = sessionData?.session?.user;
+        }
+    } catch {
+        // Fallback
+    }
+
+    if (!user && typeof localStorage !== 'undefined') {
+        const localUid = localStorage.getItem('userId');
+        if (localUid) {
+            user = { id: localUid, role: localStorage.getItem('role') };
+        }
+    }
+
+    if (!user) {
+        throw new Error('Authentication required. Please sign in as the authorized broker.');
+    }
+
+    // 2. Fetch target listing to verify ownership/assignment
+    const listing = await getListingById(listingId);
+    if (!listing) {
+        throw new Error('Listing not found.');
+    }
+
+    // 3. Validate broker authorization
+    const userRole = (typeof localStorage !== 'undefined' ? localStorage.getItem('role') : null) || user.role || user.user_metadata?.role;
+    const isStaff = userRole === 'Admin' || userRole === 'Employee';
+    const isAuthorizedBroker = (
+        (listing.broker_id && String(listing.broker_id) === String(user.id)) ||
+        (listing.created_by && String(listing.created_by) === String(user.id))
+    );
+
+    if (!isAuthorizedBroker && !isStaff) {
+        throw new Error('Unauthorized: You can only mark your own listings as Sold Out.');
+    }
+
+    // 4. Avoid duplicate/unnecessary state changes if already sold out
+    if (isListingSoldOut(listing)) {
+        return listing;
+    }
+
+    // 5. Update listing status to 'sold_out'
+    const { data, error } = await supabase
+        .from('listings')
+        .update({ status: 'sold_out' })
+        .eq('id', listingId)
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Failed to mark listing as sold_out:', error);
+        throw new Error(error.message || 'Database update failed when marking listing as Sold Out.');
+    }
+
+    return data;
+}
+
+

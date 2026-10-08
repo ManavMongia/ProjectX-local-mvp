@@ -9,7 +9,9 @@ import {
     formatIntentLabel, 
     calculateListingAge,
     isListingVerified,
-    renderListingVerificationBadge
+    renderListingVerificationBadge,
+    isListingSoldOut,
+    renderListingSoldOutBadge
 } from '../../services/listing-service.js';
 import { searchLocation } from '../../services/location-service.js';
 import { getCurrentUser } from '../../services/auth-service.js';
@@ -191,9 +193,10 @@ export async function initBuyerListingsPage() {
              data-type="${l.type}" data-beds="${l.beds}" data-baths="${l.baths}" data-price="${l.price}" data-date="${l.created_at}">
           <div class="aspect-[16/9] overflow-hidden relative bg-slate-100">
             <img loading="lazy" src="${l.img || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-            <div class="absolute top-4 left-4 flex items-center gap-1.5 z-10">
+            <div class="absolute top-4 left-4 flex items-center gap-1.5 z-10 flex-wrap">
               <span class="bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">${formatIntentLabel(l.intent)}</span>
               ${renderListingVerificationBadge(isListingVerified(l))}
+              ${renderListingSoldOutBadge(isListingSoldOut(l))}
             </div>
             <button aria-label="Save Property" class="save-property-btn absolute top-4 right-4 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur rounded-full shadow text-slate-400 hover:text-error transition-colors">
               <span class="material-symbols-outlined text-[20px]">favorite</span>
@@ -207,7 +210,10 @@ export async function initBuyerListingsPage() {
           </div>
           <div class="p-5">
             <div class="flex justify-between items-center mb-1">
-              <h3 class="text-xl font-black text-slate-900">${formatListingPrice(l.price, l.intent, { html: true })}</h3>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="text-xl font-black text-slate-900">${formatListingPrice(l.price, l.intent, { html: true })}</h3>
+                ${renderListingSoldOutBadge(isListingSoldOut(l))}
+              </div>
               ${renderListingVerificationBadge(isListingVerified(l))}
             </div>
             <p class="text-slate-500 text-sm font-medium mb-4 truncate">${escHtml(l.title)}, ${escHtml(l.location)}</p>

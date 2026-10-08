@@ -3,7 +3,7 @@
  * Interactive Leaflet map view for property listings with marker synchronization and sidebar cards.
  */
 
-import { getListings, formatListingPrice, formatIntentLabel, calculateListingAge, isListingVerified, renderListingVerificationBadge } from '../../services/listing-service.js';
+import { getListings, formatListingPrice, formatIntentLabel, calculateListingAge, isListingVerified, renderListingVerificationBadge, isListingSoldOut, renderListingSoldOutBadge } from '../../services/listing-service.js';
 import { searchLocation } from '../../services/location-service.js';
 import { syncSavedListings } from '../../services/user-service.js';
 import { getCurrentUser } from '../../services/auth-service.js';
@@ -170,7 +170,10 @@ export async function initBuyerMapPage() {
             <div class="p-2 min-w-[150px]">
                 <div class="flex items-center justify-between gap-1 mb-1">
                     <h4 class="font-bold text-sm text-slate-900">${formatListingPrice(p.price, p.intent)}</h4>
-                    ${renderListingVerificationBadge(isListingVerified(p))}
+                    <div class="flex items-center gap-1">
+                        ${renderListingSoldOutBadge(isListingSoldOut(p))}
+                        ${renderListingVerificationBadge(isListingVerified(p))}
+                    </div>
                 </div>
                 <p class="text-xs font-medium text-slate-500 mt-0.5">${escHtml(p.title)}</p>
                 <div class="flex items-center gap-2 mt-2 text-slate-600 text-[10px] font-bold">
@@ -246,7 +249,10 @@ export async function initBuyerMapPage() {
             <div id="card-${l.id}" class="listing-card cursor-pointer bg-white rounded-3xl border ${activeClasses} overflow-hidden transition-all duration-300" onclick="clickSidebarCard(${l.id})">
               <div class="aspect-[16/9] overflow-hidden relative bg-slate-100">
                 <img loading="lazy" src="${l.img || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80'}" class="w-full h-full object-cover transition-transform duration-700 ${isActive ? '' : 'group-hover:scale-105'}">
-                <div class="absolute top-4 left-4 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">${formatIntentLabel(l.intent)}</div>
+                <div class="absolute top-4 left-4 flex items-center gap-1.5">
+                  <div class="bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">${formatIntentLabel(l.intent)}</div>
+                  ${isListingSoldOut(l) ? renderListingSoldOutBadge(true) : ''}
+                </div>
               </div>
               <div class="p-5">
                 <div class="flex justify-between items-start mb-1">
@@ -280,6 +286,7 @@ export async function initBuyerMapPage() {
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
                       <span class="material-symbols-outlined text-[14px]">schedule</span> Listed ${age.date}
                     </span>
+                    ${renderListingSoldOutBadge(isListingSoldOut(l))}
                     ${renderListingVerificationBadge(isListingVerified(l))}
                   </div>
                   <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${
@@ -369,7 +376,10 @@ export async function initBuyerMapPage() {
                     <div class="p-2 min-w-[150px]">
                         <div class="flex items-center justify-between gap-1 mb-1">
                             <h4 class="font-bold text-sm text-slate-900">${formatListingPrice(l.price, l.intent)}</h4>
-                            ${renderListingVerificationBadge(isListingVerified(l))}
+                            <div class="flex items-center gap-1">
+                                ${renderListingSoldOutBadge(isListingSoldOut(l))}
+                                ${renderListingVerificationBadge(isListingVerified(l))}
+                            </div>
                         </div>
                         <p class="text-xs font-medium text-slate-500 mt-0.5">${escHtml(l.title)}</p>
                         <div class="flex items-center gap-2 mt-2 text-slate-600 text-[10px] font-bold">

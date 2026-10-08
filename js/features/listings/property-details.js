@@ -12,7 +12,10 @@ import {
     formatListingPrice,
     calculateListingAge,
     isListingVerified,
-    renderListingVerificationBadge
+    renderListingVerificationBadge,
+    isListingSoldOut,
+    markListingSoldOut,
+    formatListingStatus
 } from '../../services/listing-service.js';
 import { getListingMedia, MEDIA_PLACEHOLDER } from '../../services/media-service.js';
 import { getProfile } from '../../services/user-service.js';
@@ -45,7 +48,9 @@ export async function initBuyerDetailsPage() {
     const isStaff = userRole === 'Admin' || userRole === 'Employee';
     const isAdminPreview = new URLSearchParams(window.location.search).get('adminPreview') === '1';
 
-    if (l.status !== 'Active' && !isOwner && !isStaff && !isAdminPreview) {
+    const isSoldOut = isListingSoldOut(l);
+
+    if (l.status !== 'Active' && !isSoldOut && !isOwner && !isStaff && !isAdminPreview) {
         showToast('Property details are pending review or unavailable.', true);
         setTimeout(() => { window.location.href = 'properties.html'; }, 2000);
         return;
@@ -106,15 +111,20 @@ export async function initBuyerDetailsPage() {
     // Top status badge
     const statusBadge = document.getElementById('detail-status-badge');
     if (statusBadge) {
-        statusBadge.textContent = l.status;
-        if (l.status === 'Active') {
-            statusBadge.className = 'bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest';
-        } else if (l.status === 'Pending') {
-            statusBadge.className = 'bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest';
-        } else if (l.status === 'Flagged') {
-            statusBadge.className = 'bg-rose-100 text-rose-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest';
-        } else if (l.status === 'Sold') {
-            statusBadge.className = 'bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest';
+        if (isSoldOut) {
+            statusBadge.textContent = 'SOLD OUT';
+            statusBadge.className = 'bg-rose-100 text-rose-800 border border-rose-200 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-xs';
+        } else {
+            statusBadge.textContent = l.status;
+            if (l.status === 'Active') {
+                statusBadge.className = 'bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest';
+            } else if (l.status === 'Pending') {
+                statusBadge.className = 'bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest';
+            } else if (l.status === 'Flagged') {
+                statusBadge.className = 'bg-rose-100 text-rose-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest';
+            } else if (l.status === 'Sold') {
+                statusBadge.className = 'bg-slate-100 text-slate-800 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest';
+            }
         }
     }
 
@@ -122,6 +132,44 @@ export async function initBuyerDetailsPage() {
     const vBadge = document.getElementById('detail-verification-badge');
     if (vBadge) {
         vBadge.innerHTML = renderListingVerificationBadge(isListingVerified(l));
+    }
+
+    // Sold Out Buyer Notice & Action Disabling
+    if (isSoldOut) {
+        const descSection = document.getElementById('detail-desc');
+        if (descSection && !document.getElementById('detail-sold-out-banner')) {
+            const soldOutBanner = document.createElement('div');
+            soldOutBanner.id = 'detail-sold-out-banner';
+            soldOutBanner.className = 'p-4 bg-rose-50 border border-rose-200 text-rose-900 rounded-2xl mb-6 flex items-start gap-3 shadow-xs';
+            soldOutBanner.innerHTML = `
+                <span class="material-symbols-outlined text-rose-600 text-[24px] shrink-0 mt-0.5">do_not_disturb_on</span>
+                <div>
+                    <h4 class="font-black text-sm uppercase tracking-wider text-rose-900">Property Sold Out</h4>
+                    <p class="text-xs text-rose-700 font-medium mt-0.5 leading-relaxed">
+                        This property has been marked as Sold Out and is no longer available. Inquiries and offers for this listing are currently closed.
+                    </p>
+                </div>
+            `;
+            descSection.parentElement?.insertBefore(soldOutBanner, descSection);
+        }
+
+        const inquiryForm = document.getElementById('buyer-inquiry-form');
+        if (inquiryForm) {
+            inquiryForm.innerHTML = `
+                <div class="p-6 bg-slate-50 border border-slate-200 rounded-2xl text-center space-y-2.5">
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-rose-100 text-rose-800 rounded-full text-xs font-black uppercase tracking-wider">
+                        <span class="material-symbols-outlined text-[15px]">do_not_disturb_on</span>
+                        Inquiries Closed
+                    </span>
+                    <p class="text-xs text-slate-500 font-medium leading-relaxed">
+                        This listing is sold out. Tour schedules, offers, and direct inquiries for this property have concluded.
+                    </p>
+                </div>
+            `;
+        }
+
+        const chatSec = document.getElementById('buyer-chat-section');
+        if (chatSec) chatSec.classList.add('hidden');
     }
 
     if (isAdminPreview) {
@@ -484,7 +532,10 @@ export async function initBuyerDetailsPage() {
     const chatSection = document.getElementById('buyer-chat-section');
     const submitBtn = document.getElementById('contact-agent-btn');
 
-    if (user && role === 'Buyer') {
+    if (isSoldOut) {
+        if (chatSection) chatSection.classList.add('hidden');
+        if (form) form.classList.remove('hidden');
+    } else if (user && role === 'Buyer') {
         if (form) form.classList.add('hidden');
         if (chatSection) {
             chatSection.classList.remove('hidden');

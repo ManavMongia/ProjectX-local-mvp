@@ -62,8 +62,17 @@ function buildCardHTML(l) {
         <img loading="lazy" src="${l.img}"
              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
              onerror="this.src='https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop'">
-        <div class="absolute top-4 left-4 ${l.badgeColor} ${l.badgeColor.includes('bg-white') ? '' : 'text-white'} px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">
-          ${l.badge}
+        <div class="absolute top-4 left-4 flex items-center gap-1.5 z-10 flex-wrap">
+          ${l.badge ? `
+          <div class="${l.badgeColor || 'bg-white/95 text-slate-800'} ${l.badgeColor && !l.badgeColor.includes('bg-white') ? 'text-white' : ''} px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">
+            ${l.badge}
+          </div>
+          ` : ''}
+          ${(l.status === 'sold_out' || l.status === 'Sold Out' || l.status === 'Sold') ? `
+            <span class="bg-rose-600 text-white px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm flex items-center gap-1">
+              <span class="material-symbols-outlined text-[12px]">do_not_disturb_on</span> SOLD OUT
+            </span>
+          ` : ''}
         </div>
         <div class="absolute top-4 right-[92px] bg-slate-900/80 backdrop-blur text-white px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-wider">
           For ${l.intent}
@@ -77,7 +86,12 @@ function buildCardHTML(l) {
       </div>
       <div class="p-5">
         <div class="flex justify-between items-start mb-1">
-          <h3 class="text-xl font-black text-slate-900">${formatPrice(l.price, l.intent)}</h3>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="text-xl font-black text-slate-900">${formatPrice(l.price, l.intent)}</h3>
+            ${(l.status === 'sold_out' || l.status === 'Sold Out' || l.status === 'Sold') ? `
+              <span class="bg-rose-600 text-white px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider">SOLD OUT</span>
+            ` : ''}
+          </div>
           <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50 px-2 py-1 rounded-md">${l.type}</span>
         </div>
         <p class="text-slate-500 text-sm font-medium mb-4 truncate">${l.address}</p>
@@ -127,17 +141,23 @@ function seedPropertyGrid() {
 }
 
 // Export for use in other scripts
-window.DEMO_LISTINGS = DEMO_LISTINGS;
-window.buildCardHTML = buildCardHTML;
-window.formatPrice = formatPrice;
-window.seedPropertyGrid = seedPropertyGrid;
+if (typeof window !== 'undefined') {
+  window.DEMO_LISTINGS = DEMO_LISTINGS;
+  window.buildCardHTML = buildCardHTML;
+  window.formatPrice = formatPrice;
+  window.seedPropertyGrid = seedPropertyGrid;
+}
+
+export { DEMO_LISTINGS, buildCardHTML, formatPrice, seedPropertyGrid };
 
 // Only seed on pages that don't load from Supabase
-document.addEventListener('DOMContentLoaded', () => {
-  const page = window.location.pathname.split('/').pop() || 'index.html';
-  const supabasePages = ['properties.html', 'properties', 'index.html', 'index', 'map.html', 'map'];
-  if (!supabasePages.some(p => page.includes(p))) {
-    seedPropertyGrid();
-  }
-});
+if (typeof document !== 'undefined') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const page = window.location.pathname.split('/').pop() || 'index.html';
+    const supabasePages = ['properties.html', 'properties', 'index.html', 'index', 'map.html', 'map'];
+    if (!supabasePages.some(p => page.includes(p))) {
+      seedPropertyGrid();
+    }
+  });
+}
 
