@@ -3,7 +3,7 @@
  * Interactive Leaflet map view for property listings with marker synchronization and sidebar cards.
  */
 
-import { getListings, formatListingPrice, formatIntentLabel, calculateListingAge } from '../../services/listing-service.js';
+import { getListings, formatListingPrice, formatIntentLabel, calculateListingAge, isListingVerified, renderListingVerificationBadge } from '../../services/listing-service.js';
 import { searchLocation } from '../../services/location-service.js';
 import { syncSavedListings } from '../../services/user-service.js';
 import { getCurrentUser } from '../../services/auth-service.js';
@@ -168,7 +168,10 @@ export async function initBuyerMapPage() {
         
         marker.bindPopup(`
             <div class="p-2 min-w-[150px]">
-                <h4 class="font-bold text-sm text-slate-900">${formatListingPrice(p.price, p.intent)}</h4>
+                <div class="flex items-center justify-between gap-1 mb-1">
+                    <h4 class="font-bold text-sm text-slate-900">${formatListingPrice(p.price, p.intent)}</h4>
+                    ${renderListingVerificationBadge(isListingVerified(p))}
+                </div>
                 <p class="text-xs font-medium text-slate-500 mt-0.5">${escHtml(p.title)}</p>
                 <div class="flex items-center gap-2 mt-2 text-slate-600 text-[10px] font-bold">
                     <span>${p.beds} BEDS</span> &bull; <span>${p.baths} BATHS</span>
@@ -273,9 +276,12 @@ export async function initBuyerMapPage() {
                   </div>
                 </div>
                 <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[14px]">schedule</span> Listed ${age.date}
-                  </span>
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[14px]">schedule</span> Listed ${age.date}
+                    </span>
+                    ${renderListingVerificationBadge(isListingVerified(l))}
+                  </div>
                   <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${
                     age.days <= 7 
                       ? 'bg-emerald-50 text-emerald-700' 
@@ -361,7 +367,10 @@ export async function initBuyerMapPage() {
                 const marker = L.marker([lat, lng], { icon }).addTo(map);
                 marker.bindPopup(`
                     <div class="p-2 min-w-[150px]">
-                        <h4 class="font-bold text-sm text-slate-900">${formatListingPrice(l.price, l.intent)}</h4>
+                        <div class="flex items-center justify-between gap-1 mb-1">
+                            <h4 class="font-bold text-sm text-slate-900">${formatListingPrice(l.price, l.intent)}</h4>
+                            ${renderListingVerificationBadge(isListingVerified(l))}
+                        </div>
                         <p class="text-xs font-medium text-slate-500 mt-0.5">${escHtml(l.title)}</p>
                         <div class="flex items-center gap-2 mt-2 text-slate-600 text-[10px] font-bold">
                             <span>${l.beds} BEDS</span> &bull; <span>${l.baths} BATHS</span>

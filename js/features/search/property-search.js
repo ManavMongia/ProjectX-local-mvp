@@ -3,7 +3,14 @@
  * Coordinates home page hero search, properties directory, filters, sorting, and grid rendering.
  */
 
-import { getListings, formatListingPrice, formatIntentLabel, calculateListingAge } from '../../services/listing-service.js';
+import { 
+    getListings, 
+    formatListingPrice, 
+    formatIntentLabel, 
+    calculateListingAge,
+    isListingVerified,
+    renderListingVerificationBadge
+} from '../../services/listing-service.js';
 import { searchLocation } from '../../services/location-service.js';
 import { getCurrentUser } from '../../services/auth-service.js';
 import { syncSavedListings, getSavedListings } from '../../services/user-service.js';
@@ -80,10 +87,16 @@ export async function initBuyerHomePage() {
                      class="md:col-span-2 bg-white border border-slate-200 flex flex-col md:flex-row shadow-sm cursor-pointer hover:shadow-lg transition-all">
                   <div class="w-full md:w-1/2 h-64 md:h-auto relative overflow-hidden">
                     <img src="${top3[0].img || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80'}" class="w-full h-full object-cover">
-                    <div class="absolute top-4 left-4 bg-emerald-500 text-white px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest">Just Listed</div>
+                    <div class="absolute top-4 left-4 flex items-center gap-1.5 z-10">
+                      <span class="bg-emerald-500 text-white px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest">Just Listed</span>
+                      ${renderListingVerificationBadge(isListingVerified(top3[0]))}
+                    </div>
                   </div>
                   <div class="w-full md:w-1/2 p-8 flex flex-col justify-center">
-                    <h3 class="text-2xl font-black text-slate-900 mb-2">${formatListingPrice(top3[0].price, top3[0].intent, { html: true })}</h3>
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                      <h3 class="text-2xl font-black text-slate-900">${formatListingPrice(top3[0].price, top3[0].intent, { html: true })}</h3>
+                      ${renderListingVerificationBadge(isListingVerified(top3[0]))}
+                    </div>
                     <p class="text-sm font-bold text-slate-500 mb-6">${escHtml(top3[0].title)}, ${escHtml(top3[0].location)}</p>
                     <div class="flex items-center gap-6 pt-6 border-t border-slate-100">
                       <div class="flex items-center gap-2 text-slate-400"><span class="material-symbols-outlined text-[18px]">bed</span><span class="text-xs font-black text-slate-900">${top3[0].beds}</span></div>
@@ -111,10 +124,16 @@ export async function initBuyerHomePage() {
                          class="bg-white border border-slate-200 flex flex-col shadow-sm cursor-pointer hover:shadow-lg transition-all">
                       <div class="h-48 relative overflow-hidden">
                         <img src="${l.img || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80'}" class="w-full h-full object-cover">
-                        <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest text-slate-900">${l.type}</div>
+                        <div class="absolute top-4 left-4 flex items-center gap-1.5 z-10">
+                          <span class="bg-white/90 backdrop-blur px-2 py-1 rounded text-[9px] font-black uppercase tracking-widest text-slate-900">${l.type}</span>
+                          ${renderListingVerificationBadge(isListingVerified(l))}
+                        </div>
                       </div>
                       <div class="p-6 flex-1 flex flex-col">
-                        <h3 class="text-lg font-black text-slate-900 mb-1">${formatListingPrice(l.price, l.intent, { html: true })}</h3>
+                        <div class="flex items-center justify-between gap-2 mb-1">
+                          <h3 class="text-lg font-black text-slate-900">${formatListingPrice(l.price, l.intent, { html: true })}</h3>
+                          ${renderListingVerificationBadge(isListingVerified(l))}
+                        </div>
                         <p class="text-xs font-bold text-slate-500 mb-4 truncate">${escHtml(l.title)}</p>
                         <div class="flex items-center gap-4 mt-auto pt-4 border-t border-slate-50">
                           <div class="flex items-center gap-1.5 text-slate-400"><span class="material-symbols-outlined text-[14px]">bed</span><span class="text-[10px] font-black text-slate-900">${l.beds}</span></div>
@@ -172,7 +191,10 @@ export async function initBuyerListingsPage() {
              data-type="${l.type}" data-beds="${l.beds}" data-baths="${l.baths}" data-price="${l.price}" data-date="${l.created_at}">
           <div class="aspect-[16/9] overflow-hidden relative bg-slate-100">
             <img loading="lazy" src="${l.img || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
-            <div class="absolute top-4 left-4 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">${formatIntentLabel(l.intent)}</div>
+            <div class="absolute top-4 left-4 flex items-center gap-1.5 z-10">
+              <span class="bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">${formatIntentLabel(l.intent)}</span>
+              ${renderListingVerificationBadge(isListingVerified(l))}
+            </div>
             <button aria-label="Save Property" class="save-property-btn absolute top-4 right-4 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur rounded-full shadow text-slate-400 hover:text-error transition-colors">
               <span class="material-symbols-outlined text-[20px]">favorite</span>
             </button>
@@ -184,8 +206,9 @@ export async function initBuyerListingsPage() {
             </button>
           </div>
           <div class="p-5">
-            <div class="flex justify-between items-start mb-1">
+            <div class="flex justify-between items-center mb-1">
               <h3 class="text-xl font-black text-slate-900">${formatListingPrice(l.price, l.intent, { html: true })}</h3>
+              ${renderListingVerificationBadge(isListingVerified(l))}
             </div>
             <p class="text-slate-500 text-sm font-medium mb-4 truncate">${escHtml(l.title)}, ${escHtml(l.location)}</p>
             <div class="flex flex-wrap items-center gap-y-2 gap-x-4 text-slate-400">

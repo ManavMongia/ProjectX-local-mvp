@@ -11,7 +11,9 @@ import {
     deleteListing as removeListing,
     formatListingPrice,
     normalizeBrokerageType,
-    calculateListingAge
+    calculateListingAge,
+    isListingVerified,
+    renderListingVerificationBadge
 } from '../../services/listing-service.js';
 import { getListingMedia, saveListingMediaRows, MEDIA_PLACEHOLDER } from '../../services/media-service.js';
 import { logListingStatusChange, sendBrokerNotification } from '../../services/notification-service.js';
@@ -170,7 +172,10 @@ export function generateListingsHTML(listings, showViews) {
             </div>
           </td>
           <td class="p-4">
-            <span class="${badgeClass} px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">${l.status}</span>
+            <div class="flex flex-col gap-1 items-start">
+              <span class="${badgeClass} px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider">${l.status}</span>
+              ${renderListingVerificationBadge(isListingVerified(l))}
+            </div>
           </td>
           <td class="p-4 font-medium">${formatListingPrice(l.price, l.intent)}</td>
           ${showViews ? `<td class="p-4">${(l.views || 0).toLocaleString()}</td>` : ''}

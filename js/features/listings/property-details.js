@@ -10,7 +10,9 @@ import {
     deleteListing,
     incrementViewCount,
     formatListingPrice,
-    calculateListingAge
+    calculateListingAge,
+    isListingVerified,
+    renderListingVerificationBadge
 } from '../../services/listing-service.js';
 import { getListingMedia, MEDIA_PLACEHOLDER } from '../../services/media-service.js';
 import { getProfile } from '../../services/user-service.js';
@@ -116,6 +118,12 @@ export async function initBuyerDetailsPage() {
         }
     }
 
+    // Listing verification badge
+    const vBadge = document.getElementById('detail-verification-badge');
+    if (vBadge) {
+        vBadge.innerHTML = renderListingVerificationBadge(isListingVerified(l));
+    }
+
     if (isAdminPreview) {
         const banner = document.createElement('div');
         banner.id = 'admin-preview-banner';
@@ -189,14 +197,23 @@ export async function initBuyerDetailsPage() {
         modPanel.innerHTML = `
             <div>
                 <h4 class="text-sm font-bold uppercase tracking-widest text-slate-400 mb-2">Moderation Console</h4>
-                <div class="flex items-center gap-2 mb-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                    <span class="text-xs font-bold text-slate-500">Current Status:</span>
-                    <span class="px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider ${statusBadgeClass}" id="mod-status-badge">
-                        ${l.status}
-                    </span>
+                <div class="flex items-center justify-between gap-2 mb-4 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-500">Status:</span>
+                        <span class="px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider ${statusBadgeClass}" id="mod-status-badge">
+                            ${l.status}
+                        </span>
+                    </div>
+                    <div id="mod-verification-status-wrap">
+                        ${renderListingVerificationBadge(isListingVerified(l))}
+                    </div>
                 </div>
             </div>
             <div class="flex flex-col gap-3">
+                <button id="mod-toggle-verify-btn" class="w-full flex items-center justify-center gap-2 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-2xl font-bold text-sm transition-colors shadow-sm">
+                    <span class="material-symbols-outlined text-[20px]">${isListingVerified(l) ? 'verified' : 'new_releases'}</span>
+                    <span>${isListingVerified(l) ? 'Mark as Non-Verified' : 'Verify Listing'}</span>
+                </button>
                 <button id="mod-approve-btn" class="w-full flex items-center justify-center gap-2 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm transition-colors shadow-sm ${l.status === 'Active' ? 'hidden' : ''}">
                     <span class="material-symbols-outlined text-[20px]">check_circle</span>
                     Approve Listing
@@ -214,6 +231,30 @@ export async function initBuyerDetailsPage() {
 
         if (inquiryForm && inquiryForm.parentElement) {
             inquiryForm.parentElement.appendChild(modPanel);
+        }
+
+        const toggleVerifyBtn = modPanel.querySelector('#mod-toggle-verify-btn');
+        if (toggleVerifyBtn) {
+            toggleVerifyBtn.onclick = async () => {
+                const currentV = isListingVerified(l);
+                const nextV = !currentV;
+                const actionLabel = nextV ? 'verify' : 'un-verify (mark as Non-Verified)';
+                if (confirm(`Are you sure you want to ${actionLabel} "${l.title}"?`)) {
+                    try {
+                        await updateListing(l.id, { is_verified: nextV });
+                        l.is_verified = nextV;
+                        showToast(`✓ Listing marked as ${nextV ? 'Verified' : 'Non-Verified'}`);
+                        const vWrap = document.getElementById('mod-verification-status-wrap');
+                        if (vWrap) vWrap.innerHTML = renderListingVerificationBadge(nextV);
+                        const vBadgeEl = document.getElementById('detail-verification-badge');
+                        if (vBadgeEl) vBadgeEl.innerHTML = renderListingVerificationBadge(nextV);
+                        toggleVerifyBtn.querySelector('span:last-child').textContent = nextV ? 'Mark as Non-Verified' : 'Verify Listing';
+                        toggleVerifyBtn.querySelector('.material-symbols-outlined').textContent = nextV ? 'verified' : 'new_releases';
+                    } catch (err) {
+                        showToast(err.message, true);
+                    }
+                }
+            };
         }
 
         const approveBtn = modPanel.querySelector('#mod-approve-btn');
@@ -349,7 +390,7 @@ export async function initBuyerDetailsPage() {
                     <span class="material-symbols-outlined text-[16px] text-amber-400" style="font-variation-settings: 'FILL' 1;">star</span>
                     <span class="font-black text-slate-900">${ratingSummary.average}</span>
                     <a href="/profile.html?id=${l.broker_id}#reviews-section" class="text-slate-400 hover:text-slate-700 hover:underline transition-colors font-medium text-xs">
-                        (${ratingSummary.count} verified review${ratingSummary.count === 1 ? '' : 's'})
+                        (${ratingSummary.count} broker review${ratingSummary.count === 1 ? '' : 's'})
                     </a>
                 `;
             } else {

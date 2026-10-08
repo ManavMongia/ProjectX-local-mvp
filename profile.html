@@ -1362,7 +1362,7 @@
 
     const { data: listings, error } = await supabase
         .from('listings')
-        .select('id, title, location, price, intent, img, beds, baths, type')
+        .select('id, title, location, price, intent, img, beds, baths, type, is_verified, virtually_verified, field_verified')
         .in('id', savedIds);
 
     if (error || !listings) {
@@ -1375,6 +1375,7 @@
     if (!grid) return;
 
     grid.innerHTML = listings.map(l => {
+        const isVerified = Boolean(l.is_verified || l.virtually_verified || l.field_verified);
         const price = l.intent === 'Rent'
             ? `₹${(l.price * 100).toFixed(0)} Lac/mo`
             : `₹${l.price} Cr`;
@@ -1385,7 +1386,12 @@
                  class="w-16 h-16 rounded-lg object-cover shrink-0 group-hover:scale-105 transition-transform duration-300"
                  onerror="this.src='https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=200&q=80'" />
             <div class="flex-1 min-w-0">
-                <p class="text-sm font-black text-slate-900 truncate">${l.title}</p>
+                <div class="flex items-center gap-2">
+                    <p class="text-sm font-black text-slate-900 truncate">${l.title}</p>
+                    <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 ${isVerified ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500 border border-slate-200'}">
+                        ${isVerified ? '✓ Verified' : 'Non-Verified'}
+                    </span>
+                </div>
                 <p class="text-xs text-slate-400 font-medium truncate">${l.location}</p>
                 <div class="flex items-center justify-between mt-1">
                     <p class="text-sm font-black text-slate-900">${price}</p>

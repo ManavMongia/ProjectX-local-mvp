@@ -47,9 +47,20 @@ export async function getListingById(id) {
 }
 
 export async function createListing(listingData) {
+    // Security: Listings default to Non-Verified (false). Normal users cannot arbitrarily set is_verified to true.
+    const userRole = typeof localStorage !== 'undefined' ? localStorage.getItem('role') : null;
+    const isPrivileged = userRole === 'Admin' || userRole === 'Employee';
+
+    const payload = { ...listingData };
+    if (!isPrivileged) {
+        payload.is_verified = false;
+    } else if (payload.is_verified === undefined) {
+        payload.is_verified = false;
+    }
+
     const { data, error } = await supabase
         .from('listings')
-        .insert([listingData])
+        .insert([payload])
         .select()
         .single();
 
@@ -167,3 +178,43 @@ export function calculateListingAge(createdAt) {
     const label = days === 0 ? 'Today' : days === 1 ? '1 day old' : `${days} days old`;
     return { date, days, label };
 }
+
+// ── Listing Verification Utilities ──
+
+/**
+ * Checks whether a listing is verified.
+ * Integrates with is_verified, virtually_verified, and field_verified flags.
+ * Defaults to false (Non-Verified).
+ * 
+ * @param {Object} listing
+ * @returns {boolean}
+ */
+export function isListingVerified(listing) {
+    if (!listing) return false;
+    return Boolean(listing.is_verified || listing.virtually_verified || listing.field_verified);
+}
+
+/**
+ * Renders consistent HTML badge for listing verification state.
+ *
+ * @param {boolean} isVerified
+ * @param {Object} [options]
+ * @returns {string}
+ */
+export function renderListingVerificationBadge(isVerified, { compact = false } = {}) {
+    if (isVerified) {
+        return `
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-xs" title="Platform Verified Property">
+                <span class="material-symbols-outlined text-[13px] text-emerald-600 font-bold">check_circle</span>
+                <span>✓ Verified</span>
+            </span>
+        `.trim();
+    }
+    return `
+        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200" title="Non-Verified Listing">
+            <span class="material-symbols-outlined text-[13px] text-slate-400">shield</span>
+            <span>Non-Verified</span>
+        </span>
+    `.trim();
+}
+

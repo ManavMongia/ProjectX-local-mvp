@@ -55,7 +55,7 @@ export function injectRatingModal() {
               </span>
               <span id="rating-modal-deal-id" class="text-xs font-mono text-slate-400 font-semibold"></span>
             </div>
-            <h3 class="text-lg font-black text-slate-900 mt-1">Rate Your Experience</h3>
+            <h3 class="text-lg font-black text-slate-900 mt-1">Rate Broker / Counterparty</h3>
           </div>
           <button type="button" onclick="window.closeRatingModal()" class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-900 rounded-full hover:bg-slate-100 transition-colors">
             <span class="material-symbols-outlined text-[20px]">close</span>
@@ -87,7 +87,7 @@ export function injectRatingModal() {
           <!-- Star Rating Input -->
           <div class="text-center py-2">
             <label class="block text-[11px] font-black uppercase tracking-wider text-slate-400 mb-2.5">
-              Select Your Rating (Required)
+              Select Your Rating for this Broker / Counterparty (Required)
             </label>
             <div class="flex items-center justify-center gap-2" id="star-rating-buttons">
               ${[1, 2, 3, 4, 5].map(star => `
