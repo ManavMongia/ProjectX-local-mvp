@@ -5,6 +5,7 @@
  */
 
 import { supabase } from '../core/supabase-client.js';
+import { groupNewListing } from './property-group-service.js';
 
 export async function getListings(filters = {}) {
     let query = supabase.from('listings').select('*').order('created_at', { ascending: false });
@@ -53,6 +54,23 @@ export async function createListing(listingData) {
         .single();
 
     if (error) throw error;
+
+    // Automatic Property Grouping:
+    // If the database trigger fn_auto_group_listing already assigned property_group_id on insert,
+    // data.property_group_id will already be populated and we do not re-run.
+    // If not assigned by the database trigger, execute groupNewListing gracefully as the backend grouping mechanism.
+    if (data && !data.property_group_id) {
+        try {
+            const groupResult = await groupNewListing(data, data.id);
+            if (groupResult?.property_group_id) {
+                data.property_group_id = groupResult.property_group_id;
+            }
+        } catch (groupError) {
+            // Failure safety: do NOT fail listing creation if grouping fails
+            console.warn('Automatic property grouping encountered non-fatal error:', groupError);
+        }
+    }
+
     return data;
 }
 
