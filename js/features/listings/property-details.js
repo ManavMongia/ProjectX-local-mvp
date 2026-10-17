@@ -511,6 +511,104 @@ export async function initBuyerDetailsPage() {
         };
     }
 
+    // ── Share Listing Button (works for all users including guests) ──
+    const shareBtn = document.getElementById('share-listing-btn');
+    if (shareBtn) {
+        // Remove any inline onclick set in the HTML; we handle it here with listing context.
+        shareBtn.removeAttribute('onclick');
+
+        shareBtn.addEventListener('click', async () => {
+            const shareUrl = `${window.location.origin}/property-details.html?id=${l.id}`;
+            const shareTitle = l.title || 'Property on ProjectX';
+            const shareText = `Check out this property on ProjectX: ${shareTitle}`;
+
+            // A. Try native share (mobile and modern browsers)
+            if (typeof navigator !== 'undefined' && navigator.share) {
+                try {
+                    await navigator.share({
+                        title: shareTitle,
+                        text: shareText,
+                        url: shareUrl
+                    });
+                    // No toast — native share dialog handles feedback.
+                    return;
+                } catch (err) {
+                    // User cancelled the native share dialog — not an error, do nothing.
+                    if (err && (err.name === 'AbortError' || err.message?.includes('cancel'))) return;
+                    // For any other error, fall through to clipboard fallback.
+                }
+            }
+
+            // B. Clipboard API fallback
+            if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(shareUrl);
+                    showToast('Property link copied!');
+                    return;
+                } catch {
+                    // Clipboard failed — fall through to manual copy.
+                }
+            }
+
+            // C. Manual copy fallback: show the URL in a selectable prompt
+            //    This covers browsers/contexts where clipboard is blocked.
+            const existingManualModal = document.getElementById('share-manual-modal');
+            if (existingManualModal) existingManualModal.remove();
+
+            const manualModal = document.createElement('div');
+            manualModal.id = 'share-manual-modal';
+            manualModal.className = 'fixed inset-0 z-[300] flex items-center justify-center bg-black/50 backdrop-blur-sm';
+            manualModal.setAttribute('role', 'dialog');
+            manualModal.setAttribute('aria-modal', 'true');
+            manualModal.setAttribute('aria-label', 'Share Property');
+            manualModal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl p-6 mx-4 w-full max-w-md">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-black text-lg text-slate-900">Share Property</h3>
+                        <button id="share-manual-close" class="text-slate-400 hover:text-slate-900 transition-colors" aria-label="Close">
+                            <span class="material-symbols-outlined text-[22px]">close</span>
+                        </button>
+                    </div>
+                    <p class="text-sm font-medium text-slate-500 mb-3">Copy and share this link:</p>
+                    <div class="flex items-center gap-2">
+                        <input
+                            id="share-manual-input"
+                            type="text"
+                            readonly
+                            value="${shareUrl.replace(/"/g, '&quot;')}"
+                            class="flex-1 text-sm font-medium text-slate-900 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 outline-none focus:border-slate-400 select-all cursor-text"
+                            aria-label="Property URL"
+                        />
+                        <button id="share-manual-copy-btn"
+                            class="px-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors shrink-0"
+                        >Copy</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(manualModal);
+
+            const closeModal = () => manualModal.remove();
+            document.getElementById('share-manual-close')?.addEventListener('click', closeModal);
+            manualModal.addEventListener('click', (e) => { if (e.target === manualModal) closeModal(); });
+            document.getElementById('share-manual-input')?.select();
+
+            const manualCopyBtn = document.getElementById('share-manual-copy-btn');
+            if (manualCopyBtn) {
+                manualCopyBtn.addEventListener('click', async () => {
+                    try {
+                        await navigator.clipboard.writeText(shareUrl);
+                        showToast('Property link copied!');
+                        closeModal();
+                    } catch {
+                        // Last resort — input is selectable so user can Ctrl+C
+                        document.getElementById('share-manual-input')?.select();
+                        showToast('Select the link above and copy it manually.', true);
+                    }
+                });
+            }
+        });
+    }
+
     // Description
     const descEl = document.getElementById('detail-desc');
     if (descEl) {
