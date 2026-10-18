@@ -57,6 +57,11 @@ function buildCardHTML(l) {
          data-id="${l.id}" data-title="${l.title}" data-location="${l.location}"
          data-type="${l.type}" data-beds="${l.beds}" data-baths="${l.baths}"
          data-price="${l.price}" data-date="${l.date}" data-intent="${l.intent}"
+         data-created-at="${l.created_at || l.date || ''}"
+         data-available-from="${l.available_from || ''}"
+         data-status="${l.status || 'Active'}"
+         data-sqft="${l.sqft || 0}"
+         data-verified="${l.is_verified ? 'true' : 'false'}"
          onclick="window.location.href='/property-details.html?id=${l.id}'">
       <div class="aspect-[16/9] overflow-hidden relative bg-slate-100">
         <img loading="lazy" src="${l.img}"

@@ -274,7 +274,8 @@ export async function openListingModal(id) {
         'modal-prop-title', 'modal-location', 'modal-price', 
         'modal-intent', 'modal-type', 'modal-status', 
         'modal-beds', 'modal-baths', 'modal-sqft', 
-        'modal-lat', 'modal-lng', 'modal-brokerage', 'modal-brokerage-type', 'modal-deposit'
+        'modal-lat', 'modal-lng', 'modal-brokerage', 'modal-brokerage-type', 'modal-deposit',
+        'modal-available-from'
     ];
     inputsToReset.forEach(inputId => {
         const el = document.getElementById(inputId);
@@ -345,6 +346,8 @@ export async function openListingModal(id) {
     if (brokerageTypeEl) brokerageTypeEl.value = listing ? normalizeBrokerageType(listing.brokerage_type) : 'one_time';
     if (depositEl) depositEl.value = listing ? (listing.deposit ?? '') : '';
     document.getElementById('modal-type').value          = listing ? listing.type      : 'Apartment';
+    const availFromEl = document.getElementById('modal-available-from');
+    if (availFromEl) availFromEl.value = listing?.available_from ? String(listing.available_from).split('T')[0] : '';
     
     const statusSelect = document.getElementById('modal-status');
     if (statusSelect) {
@@ -511,9 +514,11 @@ export async function saveListingForm() {
         if (oldListing) oldStatus = oldListing.status;
     }
 
+    const available_from = document.getElementById('modal-available-from')?.value?.trim() || null;
+
     const listingData = { 
         title, location, price, intent, type, status, beds, baths, sqft, views, lat, lng, img,
-        brokerage, brokerage_type, deposit,
+        brokerage, brokerage_type, deposit, available_from,
         broker_id: user ? user.id : null
     };
 
@@ -757,6 +762,10 @@ export function injectListingModal() {
             <div>
               <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Carpet Area in SqFt *</label>
               <input id="modal-sqft" type="number" placeholder="0" class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-fixed"/>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Available From <span class="text-slate-400 font-normal normal-case">(optional)</span></label>
+              <input id="modal-available-from" type="date" class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-fixed"/>
             </div>
             <input type="hidden" id="modal-lat" value="" />
             <input type="hidden" id="modal-lng" value="" />

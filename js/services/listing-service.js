@@ -7,11 +7,146 @@
 import { supabase } from '../core/supabase-client.js';
 import { groupNewListing } from './property-group-service.js';
 
+export const RECENT_WINDOWS = {
+    '24h': 24 * 60 * 60 * 1000,
+    '7d': 7 * 24 * 60 * 60 * 1000,
+    '30d': 30 * 24 * 60 * 60 * 1000
+};
+
+/**
+ * Normalizes any date value into an ISO date string 'YYYY-MM-DD'.
+ * Avoids timezone drift and off-by-one errors by extracting calendar date components.
+ *
+ * @param {string|Date|number|null} val
+ * @returns {string|null}
+ */
+export function normalizeDateString(val) {
+    if (!val) return null;
+    if (typeof val === 'string') {
+        const trimmed = val.trim();
+        const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+            const y = parseInt(match[1], 10);
+            const m = parseInt(match[2], 10);
+            const d = parseInt(match[3], 10);
+            if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+                return `${match[1]}-${match[2]}-${match[3]}`;
+            }
+            return null;
+        }
+    }
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return null;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+/**
+ * Checks whether a listing satisfies the Available From criterion.
+ * Rule: available_from <= selected_date (property is available on or before the selected date).
+ * 
+ * Explicit Rule for Missing Availability Dates:
+ * When an availability date filter is active, listings with missing/unknown availability dates
+ * cannot be confirmed available by that date and are EXCLUDED.
+ * When no availability date filter is active (null/empty), all listings are included.
+ *
+ * @param {string|Date|null} listingAvailableFrom
+ * @param {string|Date|null} selectedDate
+ * @returns {boolean}
+ */
+export function matchesAvailableFrom(listingAvailableFrom, selectedDate) {
+    if (!selectedDate) return true;
+    const normSelected = normalizeDateString(selectedDate);
+    if (!normSelected) return true; // Invalid date filter safely ignored
+
+    const normListing = normalizeDateString(listingAvailableFrom);
+    if (!normListing) {
+        // Missing or unknown availability date cannot qualify as confirmed available
+        return false;
+    }
+
+    return normListing <= normSelected;
+}
+
+/**
+ * Checks whether a listing was created within the selected recent duration.
+ * Rule: created_at >= current_time - selected_duration
+ * Supported windows: '24h', '7d', '30d'.
+ *
+ * Requirements:
+ * - Uses real listing timestamps.
+ * - Missing or invalid timestamps do NOT qualify as recent.
+ * - Clearing filter (null/'all') removes constraint.
+ *
+ * @param {string|Date|number|null} createdAt
+ * @param {string|null} selectedWindow
+ * @param {number} [nowTimestamp]
+ * @returns {boolean}
+ */
+export function matchesRecentListing(createdAt, selectedWindow, nowTimestamp = Date.now()) {
+    if (!selectedWindow || selectedWindow === 'all') return true;
+
+    let windowMs = RECENT_WINDOWS[selectedWindow];
+    if (!windowMs) {
+        const lower = String(selectedWindow).toLowerCase();
+        if (lower.includes('24') || lower.includes('1d')) windowMs = RECENT_WINDOWS['24h'];
+        else if (lower.includes('7')) windowMs = RECENT_WINDOWS['7d'];
+        else if (lower.includes('30')) windowMs = RECENT_WINDOWS['30d'];
+    }
+    if (!windowMs) return true;
+
+    if (!createdAt) {
+        return false;
+    }
+
+    const createdTime = new Date(createdAt).getTime();
+    if (isNaN(createdTime)) {
+        return false;
+    }
+
+    const cutoff = nowTimestamp - windowMs;
+    return createdTime >= cutoff;
+}
+
+/**
+ * Checks verification status filter.
+ *
+ * @param {boolean} isVerified
+ * @param {string} verification 'all' | 'verified' | 'non_verified'
+ * @returns {boolean}
+ */
+export function matchesVerification(isVerified, verification) {
+    if (!verification || verification === 'all') return true;
+    if (verification === 'verified') return Boolean(isVerified);
+    if (verification === 'non_verified') return !isVerified;
+    return true;
+}
+
+/**
+ * Checks availability status filter (Available vs Sold Out).
+ *
+ * @param {string|Object} statusOrListing
+ * @param {string} availabilityStatus 'all' | 'available' | 'sold_out'
+ * @returns {boolean}
+ */
+export function matchesAvailabilityStatus(statusOrListing, availabilityStatus) {
+    if (!availabilityStatus || availabilityStatus === 'all') return true;
+    const soldOut = isListingSoldOut(statusOrListing);
+    if (availabilityStatus === 'available') return !soldOut;
+    if (availabilityStatus === 'sold_out') return soldOut;
+    return true;
+}
+
 export async function getListings(filters = {}) {
     let query = supabase.from('listings').select('*').order('created_at', { ascending: false });
 
     if (filters.status) {
         query = query.eq('status', filters.status);
+    }
+    if (filters.statuses && Array.isArray(filters.statuses) && filters.statuses.length > 0) {
+        query = query.in('status', filters.statuses);
     }
     if (filters.broker_id) {
         query = query.eq('broker_id', filters.broker_id);
@@ -21,6 +156,15 @@ export async function getListings(filters = {}) {
     }
     if (filters.type && filters.type !== 'Any') {
         query = query.eq('type', filters.type);
+    }
+    if (filters.available_from) {
+        const normDate = normalizeDateString(filters.available_from);
+        if (normDate) {
+            query = query.lte('available_from', normDate);
+        }
+    }
+    if (filters.created_after) {
+        query = query.gte('created_at', filters.created_after);
     }
 
     const { data, error } = await query;
@@ -58,13 +202,24 @@ export async function createListing(listingData) {
         payload.is_verified = false;
     }
 
-    const { data, error } = await supabase
+    let insertRes = await supabase
         .from('listings')
         .insert([payload])
         .select()
         .single();
 
-    if (error) throw error;
+    // Defensive fallback: If available_from column does not exist on remote database yet (42703), retry without it
+    if (insertRes.error && insertRes.error.code === '42703' && 'available_from' in payload) {
+        delete payload.available_from;
+        insertRes = await supabase
+            .from('listings')
+            .insert([payload])
+            .select()
+            .single();
+    }
+
+    if (insertRes.error) throw insertRes.error;
+    const data = insertRes.data;
 
     // Automatic Property Grouping:
     // If the database trigger fn_auto_group_listing already assigned property_group_id on insert,
@@ -86,15 +241,27 @@ export async function createListing(listingData) {
 }
 
 export async function updateListing(id, updates) {
-    const { data, error } = await supabase
+    const payload = { ...updates };
+    let updateRes = await supabase
         .from('listings')
-        .update(updates)
+        .update(payload)
         .eq('id', id)
         .select()
         .single();
 
-    if (error) throw error;
-    return data;
+    // Defensive fallback: If available_from column does not exist on remote database yet (42703), retry without it
+    if (updateRes.error && updateRes.error.code === '42703' && 'available_from' in payload) {
+        delete payload.available_from;
+        updateRes = await supabase
+            .from('listings')
+            .update(payload)
+            .eq('id', id)
+            .select()
+            .single();
+    }
+
+    if (updateRes.error) throw updateRes.error;
+    return updateRes.data;
 }
 
 export async function deleteListing(id) {

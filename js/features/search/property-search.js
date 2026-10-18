@@ -22,6 +22,14 @@ import { sortListingCards } from './sorting.js';
 import { initPagination } from './pagination.js';
 import { initGridListToggle } from '../../ui/grid-list-toggle.js';
 import { showToast } from '../../ui/toast.js';
+import {
+    initCentralizedFilters,
+    getAppliedFilters,
+    setAppliedFilters,
+    openFiltersDrawer,
+    clearAllFilters,
+    DEFAULT_FILTERS
+} from './centralized-filters.js';
 
 function escHtml(str) {
     if (!str) return '';
@@ -174,15 +182,19 @@ export async function initBuyerListingsPage() {
 
     const urlParams = new URLSearchParams(window.location.search);
     const brokerId = urlParams.get('brokerId');
-    const intent = urlParams.get('intent');
+    const intentParam = urlParams.get('intent');
 
-    let listings = await getListings({ status: 'Active' });
+    // Fetch listings (support both Active and Sold Out discovery)
+    let listings = await getListings({ statuses: ['Active', 'sold_out'] });
+    if (!listings || listings.length === 0) {
+        listings = await getListings({ status: 'Active' });
+    }
 
     if (brokerId) {
         listings = listings.filter(l => l.broker_id === brokerId);
     }
-    if (intent) {
-        listings = listings.filter(l => l.intent.toLowerCase() === intent.toLowerCase());
+    if (intentParam) {
+        listings = listings.filter(l => (l.intent || '').toLowerCase() === intentParam.toLowerCase());
     }
     
     propertyGrid.innerHTML = listings.map(l => {
@@ -190,7 +202,9 @@ export async function initBuyerListingsPage() {
         return `
         <div class="group cursor-pointer property-card bg-white rounded-3xl border border-slate-200 hover:shadow-xl overflow-hidden transition-all duration-300" 
              data-id="${l.id}" data-title="${escHtml(l.title)}" data-location="${escHtml(l.location)}" 
-             data-type="${l.type}" data-beds="${l.beds}" data-baths="${l.baths}" data-price="${l.price}" data-date="${l.created_at}">
+             data-type="${l.type}" data-beds="${l.beds}" data-baths="${l.baths}" data-price="${l.price}" data-date="${l.created_at || ''}"
+             data-intent="${l.intent || ''}" data-created-at="${l.created_at || ''}" data-available-from="${l.available_from || ''}"
+             data-status="${l.status || 'Active'}" data-sqft="${l.sqft || 0}" data-verified="${isListingVerified(l) ? 'true' : 'false'}">
           <div class="aspect-[16/9] overflow-hidden relative bg-slate-100">
             <img loading="lazy" src="${l.img || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80'}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
             <div class="absolute top-4 left-4 flex items-center gap-1.5 z-10 flex-wrap">
@@ -242,11 +256,91 @@ export async function initBuyerListingsPage() {
     const cards = Array.from(document.querySelectorAll('.property-card'));
     const countText = document.getElementById('listings-count-text');
 
-    const updateCount = () => {
-        const visibleCount = cards.filter(c => c.style.display !== 'none').length;
-        if (countText) countText.textContent = `Showing ${visibleCount} exceptional listings in Mumbai & Delhi`;
+    const updateUrlParams = (criteria) => {
+        try {
+            const url = new URL(window.location.href);
+            const p = url.searchParams;
+
+            if (criteria.query) p.set('q', criteria.query); else p.delete('q');
+            if (criteria.intent && criteria.intent !== 'all') p.set('intent', criteria.intent); else p.delete('intent');
+            if (criteria.selectedTypes && criteria.selectedTypes.length > 0) p.set('type', criteria.selectedTypes.join(',')); else p.delete('type');
+            if (criteria.minPrice > 0) p.set('minPrice', criteria.minPrice); else p.delete('minPrice');
+            if (criteria.maxPrice && criteria.maxPrice < Infinity) p.set('maxPrice', criteria.maxPrice); else p.delete('maxPrice');
+            if (criteria.activeBeds > 0) p.set('beds', criteria.activeBeds); else p.delete('beds');
+            if (criteria.activeBaths > 0) p.set('baths', criteria.activeBaths); else p.delete('baths');
+            if (criteria.recent && criteria.recent !== 'all') p.set('recent', criteria.recent); else p.delete('recent');
+            if (criteria.availableFrom) p.set('availableFrom', criteria.availableFrom); else p.delete('availableFrom');
+            if (criteria.verification && criteria.verification !== 'all') p.set('verification', criteria.verification); else p.delete('verification');
+            if (criteria.availabilityStatus && criteria.availabilityStatus !== 'all') p.set('status', criteria.availabilityStatus); else p.delete('status');
+
+            window.history.replaceState({}, '', url.toString());
+        } catch {
+            // URL update safety
+        }
     };
 
+    const executeFiltering = (criteria = getAppliedFilters()) => {
+        const queryVal = document.getElementById('listing-search-input')?.value?.toLowerCase()?.trim() || '';
+        const combinedCriteria = {
+            ...criteria,
+            query: queryVal || criteria.query || ''
+        };
+
+        let visibleCount = 0;
+        cards.forEach(card => {
+            const isVisible = filterListingCard(card, combinedCriteria);
+            card.style.display = isVisible ? 'block' : 'none';
+            if (isVisible) visibleCount++;
+        });
+
+        if (countText) {
+            countText.textContent = `Showing ${visibleCount} exceptional listings in Mumbai & Delhi`;
+        }
+
+        // Handle empty results display
+        let emptyState = document.getElementById('no-results-state');
+        if (!emptyState && propertyGrid) {
+            emptyState = document.createElement('div');
+            emptyState.id = 'no-results-state';
+            emptyState.className = 'col-span-full py-16 px-6 text-center bg-white rounded-3xl border border-slate-200 shadow-xs';
+            emptyState.innerHTML = `
+                <span class="material-symbols-outlined text-[48px] text-slate-400 mb-2">filter_alt_off</span>
+                <h3 class="text-xl font-black text-slate-900 mb-1">No matching properties found</h3>
+                <p class="text-sm text-slate-500 mb-6 max-w-md mx-auto">Try adjusting your filters, expanding your price range, or clearing date constraints.</p>
+                <button type="button" id="no-results-clear-btn" class="px-6 py-2.5 bg-slate-900 text-white font-bold text-xs uppercase tracking-wider rounded-lg hover:bg-slate-800 transition-colors shadow-sm cursor-pointer">
+                    Clear All Filters
+                </button>
+            `;
+            propertyGrid.appendChild(emptyState);
+            document.getElementById('no-results-clear-btn')?.addEventListener('click', () => {
+                clearAllFilters();
+                resetFilterInputs();
+                executeFiltering(getAppliedFilters());
+            });
+        }
+
+        if (emptyState) {
+            if (visibleCount === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+            }
+        }
+
+        updateUrlParams(combinedCriteria);
+    };
+
+    // Initialize centralized filters module with application callback
+    initCentralizedFilters({
+        onApply: (newFilters) => {
+            executeFiltering(newFilters);
+        }
+    });
+
+    // Wire sidebar "All Filters" button
+    document.getElementById('sidebar-open-all-filters-btn')?.addEventListener('click', openFiltersDrawer);
+
+    // Card favorites synchronization
     let user = await getCurrentUser();
     let savedProperties = await getSavedListings(user ? user.id : null);
 
@@ -266,68 +360,66 @@ export async function initBuyerListingsPage() {
     };
     syncSavedHearts();
 
-    const applyFilters = () => {
-        const query = document.getElementById('listing-search-input')?.value.toLowerCase() || '';
-        const selectedTypes = Array.from(document.querySelectorAll('input[name="type"]:checked')).map(i => i.value);
-        const minPrice = parseFloat(document.getElementById('price-min')?.value) || 0;
-        const maxPrice = parseFloat(document.getElementById('price-max')?.value) || Infinity;
-        
-        const activeBeds = document.querySelector('button[data-filter="beds"].bg-primary')?.dataset.value || 0;
-        const activeBaths = document.querySelector('button[data-filter="baths"].bg-primary')?.dataset.value || 0;
-
-        cards.forEach(card => {
-            const isVisible = filterListingCard(card, {
-                query,
-                selectedTypes,
-                minPrice,
-                maxPrice,
-                activeBeds,
-                activeBaths
-            });
-            card.style.display = isVisible ? 'block' : 'none';
-        });
-        updateCount();
-    };
-
     const sortCards = () => {
         const sortVal = document.getElementById('sort-dropdown')?.value;
         const sortedCards = sortListingCards(cards, sortVal);
         
         if (propertyGrid) {
+            const emptyState = document.getElementById('no-results-state');
             propertyGrid.innerHTML = '';
             sortedCards.forEach(c => propertyGrid.appendChild(c));
+            if (emptyState) propertyGrid.appendChild(emptyState);
         }
     };
 
-    document.getElementById('find-homes-btn')?.addEventListener('click', applyFilters);
+    document.getElementById('find-homes-btn')?.addEventListener('click', () => executeFiltering());
     document.getElementById('listing-search-input')?.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter') applyFilters();
+        if (e.key === 'Enter') executeFiltering();
     });
 
     document.querySelectorAll('input[name="type"], #price-min, #price-max').forEach(el => {
-        el.addEventListener('change', applyFilters);
+        el.addEventListener('change', () => {
+            const current = getAppliedFilters();
+            const checkedTypes = Array.from(document.querySelectorAll('input[name="type"]:checked')).map(i => i.value);
+            const minP = parseFloat(document.getElementById('price-min')?.value) || 0;
+            const maxP = parseFloat(document.getElementById('price-max')?.value) || Infinity;
+            setAppliedFilters({
+                ...current,
+                selectedTypes: checkedTypes,
+                minPrice: minP,
+                maxPrice: maxP
+            });
+            executeFiltering();
+        });
     });
 
     ['price-min', 'price-max'].forEach(id => {
         document.getElementById(id)?.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') applyFilters();
+            if (e.key === 'Enter') executeFiltering();
         });
     });
 
     document.querySelectorAll('button[data-filter]').forEach(btn => {
         btn.addEventListener('click', () => {
             const filterType = btn.dataset.filter;
+            const val = parseFloat(btn.dataset.value) || 0;
+            const current = getAppliedFilters();
             document.querySelectorAll(`button[data-filter="${filterType}"]`).forEach(b => {
-                b.classList.remove('bg-primary', 'text-on-primary');
+                b.classList.remove('bg-primary', 'text-on-primary', 'bg-slate-900', 'text-white');
             });
             btn.classList.add('bg-primary', 'text-on-primary');
-            applyFilters();
+
+            if (filterType === 'beds') current.activeBeds = val;
+            if (filterType === 'baths') current.activeBaths = val;
+            setAppliedFilters(current);
+            executeFiltering();
         });
     });
 
     document.getElementById('clear-all-filters')?.addEventListener('click', () => {
+        clearAllFilters();
         resetFilterInputs();
-        applyFilters();
+        executeFiltering(getAppliedFilters());
         showToast('All filters cleared.');
     });
 
@@ -377,68 +469,91 @@ export async function initBuyerListingsPage() {
 
     initPagination('.pagination-btn');
 
-    // Handle initial search & filters from URL
-    const q = urlParams.get('q');
-    const minPrice = urlParams.get('minPrice');
-    const maxPrice = urlParams.get('maxPrice');
-    const typeParam = urlParams.get('type');
-    const beds = urlParams.get('beds');
-    const baths = urlParams.get('baths');
+    // Parse and apply initial filters from URL parameters
+    const initialCriteria = { ...DEFAULT_FILTERS, selectedTypes: [] };
+    let hasUrlParams = false;
 
-    let shouldApply = false;
-
-    if (q) {
+    const qParam = urlParams.get('q');
+    if (qParam) {
+        initialCriteria.query = qParam;
         const input = document.getElementById('listing-search-input');
-        if (input) {
-            input.value = q;
-            shouldApply = true;
-        }
-    }
-    if (minPrice) {
-        const input = document.getElementById('price-min');
-        if (input) {
-            input.value = minPrice;
-            shouldApply = true;
-        }
-    }
-    if (maxPrice) {
-        const input = document.getElementById('price-max');
-        if (input) {
-            input.value = maxPrice;
-            shouldApply = true;
-        }
-    }
-    if (typeParam) {
-        const types = typeParam.split(',');
-        document.querySelectorAll('input[name="type"]').forEach(checkbox => {
-            if (types.includes(checkbox.value)) {
-                checkbox.checked = true;
-                shouldApply = true;
-            }
-        });
-    }
-    if (beds) {
-        const btn = document.querySelector(`button[data-filter="beds"][data-value="${beds}"]`);
-        if (btn) {
-            document.querySelectorAll('button[data-filter="beds"]').forEach(b => {
-                b.classList.remove('bg-primary', 'text-on-primary');
-            });
-            btn.classList.add('bg-primary', 'text-on-primary');
-            shouldApply = true;
-        }
-    }
-    if (baths) {
-        const btn = document.querySelector(`button[data-filter="baths"][data-value="${baths}"]`);
-        if (btn) {
-            document.querySelectorAll('button[data-filter="baths"]').forEach(b => {
-                b.classList.remove('bg-primary', 'text-on-primary');
-            });
-            btn.classList.add('bg-primary', 'text-on-primary');
-            shouldApply = true;
-        }
+        if (input) input.value = qParam;
+        hasUrlParams = true;
     }
 
-    if (shouldApply || brokerId || intent) {
-        applyFilters();
+    const minPriceParam = urlParams.get('minPrice');
+    if (minPriceParam) {
+        initialCriteria.minPrice = parseFloat(minPriceParam) || 0;
+        const input = document.getElementById('price-min');
+        if (input) input.value = minPriceParam;
+        hasUrlParams = true;
+    }
+
+    const maxPriceParam = urlParams.get('maxPrice');
+    if (maxPriceParam) {
+        initialCriteria.maxPrice = parseFloat(maxPriceParam) || Infinity;
+        const input = document.getElementById('price-max');
+        if (input) input.value = maxPriceParam;
+        hasUrlParams = true;
+    }
+
+    const typeParam = urlParams.get('type');
+    if (typeParam) {
+        const types = typeParam.split(',').filter(Boolean);
+        initialCriteria.selectedTypes = types;
+        document.querySelectorAll('input[name="type"]').forEach(cb => {
+            if (types.includes(cb.value)) cb.checked = true;
+        });
+        hasUrlParams = true;
+    }
+
+    const bedsParam = urlParams.get('beds');
+    if (bedsParam) {
+        initialCriteria.activeBeds = parseFloat(bedsParam) || 0;
+        const btn = document.querySelector(`button[data-filter="beds"][data-value="${bedsParam}"]`);
+        if (btn) btn.classList.add('bg-primary', 'text-on-primary');
+        hasUrlParams = true;
+    }
+
+    const bathsParam = urlParams.get('baths');
+    if (bathsParam) {
+        initialCriteria.activeBaths = parseFloat(bathsParam) || 0;
+        const btn = document.querySelector(`button[data-filter="baths"][data-value="${bathsParam}"]`);
+        if (btn) btn.classList.add('bg-primary', 'text-on-primary');
+        hasUrlParams = true;
+    }
+
+    if (intentParam) {
+        initialCriteria.intent = intentParam;
+        hasUrlParams = true;
+    }
+
+    const recentParam = urlParams.get('recent');
+    if (recentParam) {
+        initialCriteria.recent = recentParam;
+        hasUrlParams = true;
+    }
+
+    const availFromParam = urlParams.get('availableFrom');
+    if (availFromParam) {
+        initialCriteria.availableFrom = availFromParam;
+        hasUrlParams = true;
+    }
+
+    const verifyParam = urlParams.get('verification');
+    if (verifyParam) {
+        initialCriteria.verification = verifyParam;
+        hasUrlParams = true;
+    }
+
+    const statusParam = urlParams.get('status');
+    if (statusParam) {
+        initialCriteria.availabilityStatus = statusParam;
+        hasUrlParams = true;
+    }
+
+    if (hasUrlParams || brokerId) {
+        setAppliedFilters(initialCriteria);
+        executeFiltering(initialCriteria);
     }
 }
