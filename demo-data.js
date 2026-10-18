@@ -50,6 +50,56 @@ function getListingAgeBadge(dateStr) {
   `;
 }
 
+// Returns an availability badge HTML string for a listing card.
+// Sold Out takes precedence (returns '' so no badge shows).
+function _getAvailabilityBadgeHTML(l) {
+  const status = (l.status || '').trim().toLowerCase();
+  if (status === 'sold_out' || status === 'sold out' || status === 'sold') return '';
+
+  const raw = l.available_from;
+  if (!raw) return '';
+
+  // Normalize to YYYY-MM-DD
+  let norm = null;
+  try {
+    if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      norm = raw;
+    } else {
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) {
+        norm = [
+          d.getFullYear(),
+          String(d.getMonth() + 1).padStart(2, '0'),
+          String(d.getDate()).padStart(2, '0'),
+        ].join('-');
+      }
+    }
+  } catch { norm = null; }
+  if (!norm) return '';
+
+  const now = new Date();
+  const todayStr = [
+    now.getFullYear(),
+    String(now.getMonth() + 1).padStart(2, '0'),
+    String(now.getDate()).padStart(2, '0'),
+  ].join('-');
+
+  let label, colorCls, icon;
+  if (norm <= todayStr) {
+    label = 'Available Immediately';
+    colorCls = 'background-color:#059669;color:#fff;';
+    icon = 'check_circle';
+  } else {
+    const [y, m, d] = norm.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    label = `Available From ${parseInt(d, 10)} ${months[parseInt(m, 10) - 1]} ${y}`;
+    colorCls = 'background-color:#4f46e5;color:#fff;';
+    icon = 'event_available';
+  }
+
+  return `<span class="availability-badge" style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;${colorCls}" title="${label}"><span class="material-symbols-outlined" style="font-size:11px">${icon}</span><span>${label}</span></span>`;
+}
+
 // Build a card HTML string from a listing object
 function buildCardHTML(l) {
   return `
@@ -79,6 +129,7 @@ function buildCardHTML(l) {
             </span>
           ` : ''}
         </div>
+        ${_getAvailabilityBadgeHTML(l) ? `<div class="absolute bottom-3 left-4 z-10">${_getAvailabilityBadgeHTML(l)}</div>` : ''}
         <div class="absolute top-4 right-[92px] bg-slate-900/80 backdrop-blur text-white px-2 py-1 rounded-md text-[8px] font-bold uppercase tracking-wider">
           For ${l.intent}
         </div>

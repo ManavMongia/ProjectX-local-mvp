@@ -3,7 +3,7 @@
  * Interactive Leaflet map view for property listings with marker synchronization and sidebar cards.
  */
 
-import { getListings, formatListingPrice, formatIntentLabel, calculateListingAge, isListingVerified, renderListingVerificationBadge, isListingSoldOut, renderListingSoldOutBadge } from '../../services/listing-service.js';
+import { getListings, formatListingPrice, formatIntentLabel, calculateListingAge, isListingVerified, renderListingVerificationBadge, isListingSoldOut, renderListingSoldOutBadge, renderAvailabilityBadge } from '../../services/listing-service.js';
 import { searchLocation } from '../../services/location-service.js';
 import { syncSavedListings } from '../../services/user-service.js';
 import { getCurrentUser } from '../../services/auth-service.js';
@@ -253,6 +253,7 @@ export async function initBuyerMapPage() {
                   <div class="bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">${formatIntentLabel(l.intent)}</div>
                   ${isListingSoldOut(l) ? renderListingSoldOutBadge(true) : ''}
                 </div>
+                ${renderAvailabilityBadge(l) ? `<div class="absolute bottom-3 left-4 z-10">${renderAvailabilityBadge(l)}</div>` : ''}
               </div>
               <div class="p-5">
                 <div class="flex justify-between items-start mb-1">

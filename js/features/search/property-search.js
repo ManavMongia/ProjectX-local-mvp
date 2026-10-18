@@ -11,7 +11,8 @@ import {
     isListingVerified,
     renderListingVerificationBadge,
     isListingSoldOut,
-    renderListingSoldOutBadge
+    renderListingSoldOutBadge,
+    renderAvailabilityBadge
 } from '../../services/listing-service.js';
 import { searchLocation } from '../../services/location-service.js';
 import { getCurrentUser } from '../../services/auth-service.js';
@@ -212,6 +213,7 @@ export async function initBuyerListingsPage() {
               ${renderListingVerificationBadge(isListingVerified(l))}
               ${renderListingSoldOutBadge(isListingSoldOut(l))}
             </div>
+            ${renderAvailabilityBadge(l) ? `<div class="absolute bottom-3 left-4 z-10">${renderAvailabilityBadge(l)}</div>` : ''}
             <button aria-label="Save Property" class="save-property-btn absolute top-4 right-4 w-9 h-9 flex items-center justify-center bg-white/90 backdrop-blur rounded-full shadow text-slate-400 hover:text-error transition-colors">
               <span class="material-symbols-outlined text-[20px]">favorite</span>
             </button>

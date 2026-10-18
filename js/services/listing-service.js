@@ -435,6 +435,82 @@ export function renderListingSoldOutBadge(isSoldOut) {
     `.trim();
 }
 
+// ── Availability Label & Badge ──
+
+/**
+ * Returns a human-readable availability label for a listing.
+ *
+ * Rules:
+ *  - Sold Out listings → returns null (no label; sold-out badge takes precedence).
+ *  - available_from is null / empty → returns null (unknown availability; no label).
+ *  - available_from is today or in the past → 'Available Immediately'.
+ *  - available_from is in the future → 'Available From DD MMM YYYY'.
+ *
+ * The comparison is calendar-date based (YYYY-MM-DD strings) to avoid
+ * timezone-drift off-by-one errors.
+ *
+ * @param {Object} listing  – listing object with .status and .available_from
+ * @returns {string|null}
+ */
+export function getAvailabilityLabel(listing) {
+    if (!listing) return null;
+
+    // Sold Out takes precedence – no availability label shown
+    if (isListingSoldOut(listing)) return null;
+
+    const raw = listing.available_from;
+    if (!raw) return null;
+
+    const norm = normalizeDateString(raw);
+    if (!norm) return null;
+
+    // Today's date as YYYY-MM-DD (local calendar date, no UTC shift)
+    const now = new Date();
+    const todayStr = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, '0'),
+        String(now.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    if (norm <= todayStr) {
+        return 'Available Immediately';
+    }
+
+    // Format future date as "DD MMM YYYY"
+    const [y, m, d] = norm.split('-');
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const monthLabel = monthNames[parseInt(m, 10) - 1] || m;
+    return `Available From ${parseInt(d, 10)} ${monthLabel} ${y}`;
+}
+
+/**
+ * Renders an availability HTML badge for listing cards.
+ * Returns empty string when no label should be shown.
+ *
+ * Immediate availability → green badge.
+ * Future availability    → blue/indigo badge.
+ *
+ * @param {Object} listing
+ * @returns {string}
+ */
+export function renderAvailabilityBadge(listing) {
+    const label = getAvailabilityLabel(listing);
+    if (!label) return '';
+
+    const isImmediate = label === 'Available Immediately';
+    const colorClasses = isImmediate
+        ? 'bg-emerald-600 text-white'
+        : 'bg-indigo-600 text-white';
+    const icon = isImmediate ? 'check_circle' : 'event_available';
+
+    return `
+        <span class="availability-badge inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${colorClasses} shadow-sm" title="${label}">
+            <span class="material-symbols-outlined text-[11px]">${icon}</span>
+            <span>${label}</span>
+        </span>
+    `.trim();
+}
+
 /**
  * Marks a listing as Sold Out with strict broker/owner authorization checks.
  *
