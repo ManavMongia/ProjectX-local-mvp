@@ -25,27 +25,43 @@ function formatPrice(price, intent = "Buy") {
   return `₹${(crore * 100).toFixed(0)} L`;
 }
 
-// Returns a listing-age footer row with colour-coded freshness
+// Returns a listing-age footer row matching the centralized listing-service logic.
+// Uses calendar-day comparison to avoid timezone-drift errors.
 function getListingAgeBadge(dateStr) {
+  if (!dateStr) return '';
   const listed = new Date(dateStr);
+  if (isNaN(listed.getTime())) return '';
+
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dateFormatted = `${listed.getDate()} ${MONTHS[listed.getMonth()]} ${listed.getFullYear()}`;
+
+  // Calendar-day diff (timezone-safe)
   const now = new Date();
-  const days = Math.floor((now - listed) / (1000 * 60 * 60 * 24));
+  const toYMD = (d) => [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+  ].join('-');
+  const [cy, cm, cd] = toYMD(listed).split('-').map(Number);
+  const [ny, nm, nd] = toYMD(now).split('-').map(Number);
+  const days = Math.max(0, Math.round(
+    (new Date(ny, nm - 1, nd) - new Date(cy, cm - 1, cd)) / 86400000
+  ));
 
-  let color;
-  if (days <= 5) color = 'text-emerald-600';
-  else if (days <= 10) color = 'text-orange-500';
-  else color = 'text-red-500';
-
-  const listedFormatted = listed.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
-  const label = days === 0 ? 'NEW TODAY' : `${days} DAY${days === 1 ? '' : 'S'} OLD`;
+  const label = days === 0 ? 'Listed today' : days === 1 ? '1 day old' : `${days} days old`;
+  const colorClass = days <= 7
+    ? 'bg-emerald-50 text-emerald-700'
+    : days <= 30
+      ? 'bg-amber-50 text-amber-700'
+      : 'bg-slate-50 text-slate-600';
 
   return `
     <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
       <div class="flex items-center gap-1.5 text-slate-400">
         <span class="material-symbols-outlined text-[14px]">schedule</span>
-        <span class="text-[10px] font-bold uppercase tracking-widest">Listed ${listedFormatted}</span>
+        <span class="text-[10px] font-bold uppercase tracking-widest">Created on ${dateFormatted}</span>
       </div>
-      <span class="text-[10px] font-black uppercase tracking-widest ${color}">${label}</span>
+      <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${colorClass}">${label}</span>
     </div>
   `;
 }

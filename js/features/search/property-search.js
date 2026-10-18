@@ -12,7 +12,8 @@ import {
     renderListingVerificationBadge,
     isListingSoldOut,
     renderListingSoldOutBadge,
-    renderAvailabilityBadge
+    renderAvailabilityBadge,
+    renderListingAgeBadge
 } from '../../services/listing-service.js';
 import { searchLocation } from '../../services/location-service.js';
 import { getCurrentUser } from '../../services/auth-service.js';
@@ -116,15 +117,9 @@ export async function initBuyerHomePage() {
                     </div>
                     <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                       <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                        <span class="material-symbols-outlined text-[14px]">schedule</span> Listed ${age0.date}
+                        <span class="material-symbols-outlined text-[14px]">schedule</span> Created on ${age0.date}
                       </span>
-                      <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${
-                        age0.days <= 7 
-                          ? 'bg-emerald-50 text-emerald-700' 
-                          : age0.days <= 30 
-                            ? 'bg-amber-50 text-amber-700' 
-                            : 'bg-slate-50 text-slate-600'
-                      }">${age0.label}</span>
+                      ${renderListingAgeBadge(age0)}
                     </div>
                   </div>
                 </div>
@@ -151,14 +146,8 @@ export async function initBuyerHomePage() {
                           <div class="flex items-center gap-1.5 text-slate-400"><span class="material-symbols-outlined text-[14px]">square_foot</span><span class="text-[10px] font-black text-slate-900">${(l.sqft || 0).toLocaleString()}</span></div>
                         </div>
                         <div class="mt-3 pt-2 border-t border-slate-50 flex items-center justify-between text-[10px]">
-                          <span class="font-bold text-slate-400 uppercase tracking-widest">${age.date}</span>
-                          <span class="font-extrabold uppercase tracking-wider ${
-                            age.days <= 7 
-                              ? 'text-emerald-600' 
-                              : age.days <= 30 
-                                ? 'text-amber-600' 
-                                : 'text-slate-500'
-                          }">${age.label}</span>
+                          <span class="font-bold text-slate-400 uppercase tracking-widest">Created on ${age.date}</span>
+                          ${renderListingAgeBadge(age)}
                         </div>
                       </div>
                     </div>
@@ -240,15 +229,9 @@ export async function initBuyerListingsPage() {
             </div>
             <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
               <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                <span class="material-symbols-outlined text-[14px]">schedule</span> Listed ${age.date}
+                <span class="material-symbols-outlined text-[14px]">schedule</span> Created on ${age.date}
               </span>
-              <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${
-                age.days <= 7 
-                  ? 'bg-emerald-50 text-emerald-700' 
-                  : age.days <= 30 
-                    ? 'bg-amber-50 text-amber-700' 
-                    : 'bg-slate-50 text-slate-600'
-              }">${age.label}</span>
+              ${renderListingAgeBadge(age)}
             </div>
           </div>
         </div>

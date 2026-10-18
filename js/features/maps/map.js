@@ -3,7 +3,7 @@
  * Interactive Leaflet map view for property listings with marker synchronization and sidebar cards.
  */
 
-import { getListings, formatListingPrice, formatIntentLabel, calculateListingAge, isListingVerified, renderListingVerificationBadge, isListingSoldOut, renderListingSoldOutBadge, renderAvailabilityBadge } from '../../services/listing-service.js';
+import { getListings, formatListingPrice, formatIntentLabel, calculateListingAge, isListingVerified, renderListingVerificationBadge, isListingSoldOut, renderListingSoldOutBadge, renderAvailabilityBadge, renderListingAgeBadge } from '../../services/listing-service.js';
 import { searchLocation } from '../../services/location-service.js';
 import { syncSavedListings } from '../../services/user-service.js';
 import { getCurrentUser } from '../../services/auth-service.js';
@@ -166,6 +166,7 @@ export async function initBuyerMapPage() {
 
         const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
         
+        const popupAge = calculateListingAge(p.created_at);
         marker.bindPopup(`
             <div class="p-2 min-w-[150px]">
                 <div class="flex items-center justify-between gap-1 mb-1">
@@ -178,6 +179,10 @@ export async function initBuyerMapPage() {
                 <p class="text-xs font-medium text-slate-500 mt-0.5">${escHtml(p.title)}</p>
                 <div class="flex items-center gap-2 mt-2 text-slate-600 text-[10px] font-bold">
                     <span>${p.beds} BEDS</span> &bull; <span>${p.baths} BATHS</span>
+                </div>
+                <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
+                    <span class="font-bold">Created on ${popupAge.date}</span>
+                    ${renderListingAgeBadge(popupAge)}
                 </div>
                 <button onclick="window.location.href='property-details.html?id=${p.id}'" class="mt-3 w-full bg-slate-900 text-white px-3 py-1.5 rounded text-[10px] uppercase font-bold hover:bg-slate-800 transition-colors">View Details</button>
             </div>
@@ -285,18 +290,12 @@ export async function initBuyerMapPage() {
                 <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                      <span class="material-symbols-outlined text-[14px]">schedule</span> Listed ${age.date}
+                      <span class="material-symbols-outlined text-[14px]">schedule</span> Created on ${age.date}
                     </span>
                     ${renderListingSoldOutBadge(isListingSoldOut(l))}
                     ${renderListingVerificationBadge(isListingVerified(l))}
                   </div>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${
-                    age.days <= 7 
-                      ? 'bg-emerald-50 text-emerald-700' 
-                      : age.days <= 30 
-                        ? 'bg-amber-50 text-amber-700' 
-                        : 'bg-slate-50 text-slate-600'
-                  }">${age.label}</span>
+                  ${renderListingAgeBadge(age)}
                 </div>
               </div>
             </div>

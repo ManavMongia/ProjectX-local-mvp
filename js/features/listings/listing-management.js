@@ -192,8 +192,8 @@ export function generateListingsHTML(listings, showViews) {
           <td class="p-4 font-medium">${formatListingPrice(l.price, l.intent)}</td>
           ${showViews ? `<td class="p-4">${(l.views || 0).toLocaleString()}</td>` : ''}
           <td class="p-4">
-            <div class="text-sm font-medium text-slate-900">${age.date}</div>
-            <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wide">${age.label}</div>
+            <div class="text-sm font-medium text-slate-900">Created on ${age.date}</div>
+            <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wide">${age.label || '—'}</div>
           </td>
           <td class="p-4 text-right">
             <div class="flex items-center justify-end gap-2">

@@ -336,14 +336,79 @@ export function brokerageTypeLabel(value) {
     return normalizeBrokerageType(value) === 'annually' ? 'Annually' : 'One Time';
 }
 
-export function calculateListingAge(createdAt) {
+/**
+ * Calculates the age of a listing in calendar days and returns a formatted
+ * date string, the numeric days count, and a display label.
+ *
+ * - Date format:  "15 Oct 2026"  (day month year, no locale dependency).
+ * - Age label:    "Listed today" | "1 day old" | "N days old".
+ * - Timezone-safe: uses local calendar-date strings (YYYY-MM-DD) for the
+ *   day difference, avoiding millisecond-division drift across DST boundaries.
+ * - Invalid / missing timestamps return graceful empty values.
+ *
+ * This is the single source of truth for listing age across all card surfaces.
+ * Do NOT add parallel age calculations elsewhere.
+ *
+ * @param {string|Date|number|null} createdAt
+ * @param {Date} [_now]  – injectable "now" for deterministic testing
+ * @returns {{ date: string, days: number|null, label: string }}
+ */
+export function calculateListingAge(createdAt, _now) {
     if (!createdAt) return { date: '—', days: null, label: '' };
+
     const created = new Date(createdAt);
-    const diffTime = Date.now() - created.getTime();
-    const days = Math.max(0, Math.floor(diffTime / 86400000));
-    const date = created.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
-    const label = days === 0 ? 'Today' : days === 1 ? '1 day old' : `${days} days old`;
-    return { date, days, label };
+    if (isNaN(created.getTime())) return { date: '—', days: null, label: '' };
+
+    // Format creation date as "15 Oct 2026" using local calendar fields.
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const dateStr = `${created.getDate()} ${MONTHS[created.getMonth()]} ${created.getFullYear()}`;
+
+    // Calendar-day difference: extract YYYY-MM-DD strings from local dates.
+    // This avoids fractional-day or DST-boundary errors from raw ms division.
+    const now = _now instanceof Date ? _now : new Date();
+    const toYMD = (d) => [
+        d.getFullYear(),
+        String(d.getMonth() + 1).padStart(2, '0'),
+        String(d.getDate()).padStart(2, '0'),
+    ].join('-');
+
+    const createdYMD = toYMD(created);
+    const nowYMD = toYMD(now);
+
+    // Parse YMD strings back to local midnight dates for clean subtraction.
+    const [cy, cm, cd] = createdYMD.split('-').map(Number);
+    const [ny, nm, nd] = nowYMD.split('-').map(Number);
+    const createdMidnight = new Date(cy, cm - 1, cd);
+    const nowMidnight = new Date(ny, nm - 1, nd);
+    const days = Math.max(0, Math.round((nowMidnight - createdMidnight) / 86400000));
+
+    const label = days === 0
+        ? 'Listed today'
+        : days === 1
+            ? '1 day old'
+            : `${days} days old`;
+
+    return { date: dateStr, days, label };
+}
+
+/**
+ * Renders a coloured age badge for a listing card (HTML string).
+ * Coloured by freshness:
+ *   ≤7 days → green  |  ≤30 days → amber  |  older → slate.
+ *
+ * Returns an empty string when `days` is null (missing / invalid timestamp).
+ *
+ * @param {{ date: string, days: number|null, label: string }} age
+ * @returns {string}
+ */
+export function renderListingAgeBadge(age) {
+    if (!age || age.days === null) return '';
+    const colorClass = age.days <= 7
+        ? 'bg-emerald-50 text-emerald-700'
+        : age.days <= 30
+            ? 'bg-amber-50 text-amber-700'
+            : 'bg-slate-50 text-slate-600';
+    return `<span class="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider ${colorClass}">${age.label}</span>`;
 }
 
 // ── Listing Verification Utilities ──

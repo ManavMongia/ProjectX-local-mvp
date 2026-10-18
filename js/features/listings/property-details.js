@@ -497,8 +497,21 @@ export async function initBuyerDetailsPage() {
     const daysOldEl = document.getElementById('detail-days-old');
     if (listedDateEl && daysOldEl) {
         const age = calculateListingAge(l.created_at);
-        listedDateEl.textContent = age.date;
-        daysOldEl.textContent = age.label || 'Listed Date';
+        if (age.days !== null) {
+            listedDateEl.textContent = age.date;
+            daysOldEl.textContent = age.label;
+            if (age.days <= 7) {
+                daysOldEl.className = 'text-xs font-bold uppercase tracking-widest text-emerald-600';
+            } else if (age.days <= 30) {
+                daysOldEl.className = 'text-xs font-bold uppercase tracking-widest text-amber-600';
+            } else {
+                daysOldEl.className = 'text-xs font-bold uppercase tracking-widest text-slate-500';
+            }
+        } else {
+            listedDateEl.textContent = '—';
+            daysOldEl.textContent = 'Created';
+            daysOldEl.className = 'text-xs font-bold uppercase tracking-widest text-slate-500';
+        }
     }
 
     const viewsEl = document.getElementById('detail-views');
