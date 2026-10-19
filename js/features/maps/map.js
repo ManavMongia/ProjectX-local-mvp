@@ -29,6 +29,13 @@ import {
     DEFAULT_FILTERS
 } from '../search/centralized-filters.js';
 import { filterListingCard } from '../search/filters.js';
+import {
+    DEFAULT_CLUSTER_OPTIONS,
+    createClusterIcon,
+    filterListingsForClustering,
+    getClusterListingIds,
+    renderClusterFilterBanner
+} from './map-clustering.js';
 
 function escHtml(str) {
     if (!str) return '';
@@ -127,6 +134,7 @@ export async function initBuyerMapPage() {
     let currentQuery = (qParam || '').toLowerCase().trim();
     let currentSort = 'default';
     let currentViewMode = 'split'; // 'split' | 'map' | 'list'
+    let selectedClusterListingIds = null;
 
     // Set initial filter state if URL params provided
     if (intentParam) {
@@ -138,6 +146,19 @@ export async function initBuyerMapPage() {
         const applied = getAppliedFilters();
         applied.selectedTypes = typeParam.split(',').map(s => s.trim());
         setAppliedFilters(applied);
+    }
+
+    // ── Marker Clustering Layer Group Initialization ──
+    let markerClusterGroup = null;
+    if (typeof L !== 'undefined' && typeof L.markerClusterGroup === 'function') {
+        markerClusterGroup = L.markerClusterGroup({
+            ...DEFAULT_CLUSTER_OPTIONS,
+            iconCreateFunction: createClusterIcon
+        });
+        map.addLayer(markerClusterGroup);
+    } else if (typeof L !== 'undefined') {
+        markerClusterGroup = L.layerGroup();
+        map.addLayer(markerClusterGroup);
     }
 
     // ── Build Leaflet Markers ──
@@ -181,7 +202,10 @@ export async function initBuyerMapPage() {
             iconAnchor: [0, 0]
         });
 
-        const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
+        const marker = L.marker([p.lat, p.lng], { icon });
+        marker.listingId = p.id;
+        marker.listingData = p;
+
         const popupAge = calculateListingAge(p.created_at);
 
         marker.bindPopup(`
@@ -229,18 +253,54 @@ export async function initBuyerMapPage() {
         }, index * 1000);
     });
 
-    // ── Bidirectional Selection ──
-    function selectListing(id, fromMap = false) {
-        activeListingId = id;
-        const markerObj = markers.find(m => m.id == id);
-        
-        if (!fromMap && markerObj) {
-            isProgrammaticMove = true;
-            map.flyTo([markerObj.data.lat, markerObj.data.lng], 15, { animate: true, duration: 0.5 });
-            markerObj.marker.openPopup();
-            setTimeout(() => { isProgrammaticMove = false; }, 600);
-        }
+    // ── Cluster Click Interaction with Side-List Synchronization & Spiderfying ──
+    if (markerClusterGroup && typeof markerClusterGroup.on === 'function') {
+        markerClusterGroup.on('clusterclick', (a) => {
+            const cluster = a.layer;
+            const clusterIds = getClusterListingIds(cluster);
+            if (!clusterIds || clusterIds.length === 0) return;
 
+            // Activate cluster filter in side list
+            selectedClusterListingIds = new Set(clusterIds);
+
+            // If on mobile bottom sheet, snap to half so user can view cluster properties
+            if (isMobile()) {
+                setSheetHeight(SNAP_HALF, true);
+            }
+
+            // Re-render side list focusing on cluster listings
+            renderSideList();
+
+            const currentZoom = map.getZoom();
+            const maxZoom = map.getMaxZoom() || 18;
+            const bounds = cluster.getBounds();
+            const isSameCoord = bounds.getNorthEast().equals(bounds.getSouthWest());
+
+            // Smooth zoom to bounds or spiderfy at max zoom / identical coordinates
+            if (currentZoom >= maxZoom || isSameCoord) {
+                if (typeof cluster.spiderfy === 'function') {
+                    cluster.spiderfy();
+                }
+            } else {
+                if (typeof cluster.zoomToBounds === 'function') {
+                    cluster.zoomToBounds({ padding: [40, 40] });
+                } else {
+                    map.fitBounds(bounds, { padding: [40, 40] });
+                }
+            }
+        });
+    }
+
+    // Reset cluster selection when clicking blank map space
+    map.on('click', () => {
+        if (selectedClusterListingIds) {
+            selectedClusterListingIds = null;
+            renderSideList();
+        }
+    });
+
+    // ── Bidirectional Selection ──
+    function highlightPinAndCard(id, fromMap) {
         // Visual highlight on map pins
         document.querySelectorAll('.map-pin-wrapper').forEach(wrapper => {
             wrapper.classList.remove('active-pin');
@@ -255,6 +315,12 @@ export async function initBuyerMapPage() {
             pinEl.style.boxShadow = '0 8px 24px rgba(15,23,42,0.3)';
             pinEl.style.transform = 'translate(-50%, -50%) scale(1.15)';
             pinEl.style.zIndex = '1000';
+        }
+
+        // If card was clicked from map, check if cluster filter is active and needs clearing
+        if (fromMap && selectedClusterListingIds && !selectedClusterListingIds.has(id)) {
+            selectedClusterListingIds = null;
+            renderSideList();
         }
 
         // Visual highlight and scroll on side-list card
@@ -272,6 +338,30 @@ export async function initBuyerMapPage() {
                     cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }, 100);
             }
+        }
+    }
+
+    function selectListing(id, fromMap = false) {
+        activeListingId = id;
+        const markerObj = markers.find(m => m.id == id);
+        
+        if (!fromMap && markerObj) {
+            isProgrammaticMove = true;
+            // If marker is inside a cluster, zoomToShowLayer smoothly reveals and opens it
+            if (markerClusterGroup && typeof markerClusterGroup.zoomToShowLayer === 'function') {
+                markerClusterGroup.zoomToShowLayer(markerObj.marker, () => {
+                    markerObj.marker.openPopup();
+                    highlightPinAndCard(id, fromMap);
+                    isProgrammaticMove = false;
+                });
+            } else {
+                map.flyTo([markerObj.data.lat, markerObj.data.lng], 15, { animate: true, duration: 0.5 });
+                markerObj.marker.openPopup();
+                highlightPinAndCard(id, fromMap);
+                setTimeout(() => { isProgrammaticMove = false; }, 600);
+            }
+        } else {
+            highlightPinAndCard(id, fromMap);
         }
     }
 
@@ -362,37 +452,34 @@ export async function initBuyerMapPage() {
     const matchesCountEl = document.getElementById('map-listings-count');
     const toolbarCountEl = document.getElementById('map-listings-count-toolbar');
 
-    function applyFiltersAndSync() {
-        const applied = getAppliedFilters();
-        
-        // 1. Evaluate matching listings
-        const matchingListings = allListings.filter(l => matchesListingCriteria(l, applied));
-        const matchingIds = new Set(matchingListings.map(l => l.id));
+    let currentMatchingListings = [];
 
-        // 2. Synchronize Leaflet map markers
-        markers.forEach(({ id, marker }) => {
-            const el = marker.getElement();
-            if (matchingIds.has(id)) {
-                if (el) el.style.display = '';
+    function renderSideList() {
+        if (!sidebarContainer) return;
+
+        // Determine whether to display cluster-focused or all matching listings
+        let displayedListings = currentMatchingListings;
+        let isClusterFiltered = false;
+
+        if (selectedClusterListingIds && selectedClusterListingIds.size > 0) {
+            const clusterItems = currentMatchingListings.filter(l => selectedClusterListingIds.has(l.id));
+            if (clusterItems.length > 0) {
+                displayedListings = clusterItems;
+                isClusterFiltered = true;
             } else {
-                if (el) el.style.display = 'none';
-                if (marker.isPopupOpen()) {
-                    marker.closePopup();
-                }
+                selectedClusterListingIds = null;
             }
-        });
+        }
 
-        // 3. Sort matching listings
-        const sortedListings = sortListingsData(matchingListings, currentSort);
+        const sortedListings = sortListingsData(displayedListings, currentSort);
 
-        // 4. Update count indicators
-        const countMsg = `${sortedListings.length} ${sortedListings.length === 1 ? 'home' : 'homes'} found in Mumbai & Delhi`;
+        // Update count indicators
+        const countMsg = isClusterFiltered
+            ? `${sortedListings.length} ${sortedListings.length === 1 ? 'home' : 'homes'} in selected cluster`
+            : `${currentMatchingListings.length} ${currentMatchingListings.length === 1 ? 'home' : 'homes'} found in Mumbai & Delhi`;
         if (countText) countText.textContent = countMsg;
         if (matchesCountEl) matchesCountEl.textContent = `${sortedListings.length} MATCHES FOUND`;
         if (toolbarCountEl) toolbarCountEl.textContent = `${sortedListings.length} homes`;
-
-        // 5. Render side list cards
-        if (!sidebarContainer) return;
 
         if (sortedListings.length === 0) {
             sidebarContainer.innerHTML = `
@@ -407,8 +494,8 @@ export async function initBuyerMapPage() {
             `;
             document.getElementById('map-clear-all-btn')?.addEventListener('click', () => {
                 clearAllFilters();
-                const searchInput = document.getElementById('listing-search-input') || document.getElementById('map-location-search');
-                if (searchInput) searchInput.value = '';
+                const sInput = document.getElementById('listing-search-input') || document.getElementById('map-location-search');
+                if (sInput) sInput.value = '';
                 currentQuery = '';
                 applyFiltersAndSync();
             });
@@ -417,7 +504,11 @@ export async function initBuyerMapPage() {
 
         let saved = JSON.parse(localStorage.getItem('savedProperties') || '[]');
 
-        sidebarContainer.innerHTML = sortedListings.map(l => {
+        const bannerHtml = isClusterFiltered 
+            ? renderClusterFilterBanner(sortedListings.length, currentMatchingListings.length) 
+            : '';
+
+        const cardsHtml = sortedListings.map(l => {
             const age = calculateListingAge(l.created_at);
             const isActive = activeListingId == l.id;
             const activeClasses = isActive ? 'ring-4 ring-slate-900 shadow-2xl scale-[1.01]' : 'border-slate-200 hover:shadow-xl';
@@ -476,9 +567,51 @@ export async function initBuyerMapPage() {
             `;
         }).join('');
 
-        if (activeListingId) {
-            selectListing(activeListingId, false);
+        sidebarContainer.innerHTML = bannerHtml + cardsHtml;
+
+        // Wire clear cluster filter button
+        const clearClusterBtn = document.getElementById('clear-cluster-filter-btn');
+        if (clearClusterBtn) {
+            clearClusterBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectedClusterListingIds = null;
+                renderSideList();
+            });
         }
+
+        if (activeListingId) {
+            highlightPinAndCard(activeListingId, false);
+        }
+    }
+
+    function applyFiltersAndSync() {
+        const applied = getAppliedFilters();
+        selectedClusterListingIds = null; // Reset cluster selection upon filter change
+
+        // 1. Evaluate matching listings across all filters
+        currentMatchingListings = allListings.filter(l => matchesListingCriteria(l, applied));
+
+        // 2. Synchronize Leaflet marker cluster group
+        if (markerClusterGroup) {
+            markerClusterGroup.clearLayers();
+            const validGeoListings = filterListingsForClustering(currentMatchingListings);
+            const layersToAdd = [];
+            validGeoListings.forEach(l => {
+                const mObj = markers.find(m => m.id == l.id);
+                if (mObj) {
+                    layersToAdd.push(mObj.marker);
+                }
+            });
+
+            if (typeof markerClusterGroup.addLayers === 'function') {
+                markerClusterGroup.addLayers(layersToAdd);
+            } else if (typeof markerClusterGroup.addLayer === 'function') {
+                layersToAdd.forEach(m => markerClusterGroup.addLayer(m));
+            }
+        }
+
+        // 3. Render side-list
+        renderSideList();
     }
 
     // Initialize centralized filters with re-render callback

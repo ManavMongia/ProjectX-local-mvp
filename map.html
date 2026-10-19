@@ -11,8 +11,13 @@
   <link rel="stylesheet" href="/style.css">
   <!-- Leaflet Map CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Leaflet MarkerCluster CSS (Local with CDN fallback) -->
+  <link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.css" onerror="this.onerror=null;this.href='https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css';"/>
+  <link rel="stylesheet" href="/vendor/leaflet.markercluster/MarkerCluster.Default.css" onerror="this.onerror=null;this.href='https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css';"/>
   <!-- Leaflet Map JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Leaflet MarkerCluster JS (Local with CDN fallback) -->
+  <script src="/vendor/leaflet.markercluster/leaflet.markercluster.js" onerror="this.onerror=null;var s=document.createElement('script');s.src='https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js';document.head.appendChild(s);"></script>
   <script type="module" src="/auth.js"></script>
   <script type="module" src="/demo-data.js"></script>
   <style>
@@ -53,6 +58,132 @@
     }
     .map-pin-wrapper.active-pin .pin-dot {
         background: white !important;
+    }
+
+    /* ProjectX Smart Cluster Markers */
+    .projectx-cluster {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        border-radius: 9999px;
+        color: #ffffff;
+        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, background-color 0.22s ease;
+        position: relative;
+    }
+    .projectx-cluster::before {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        border-radius: 9999px;
+        background: inherit;
+        opacity: 0.25;
+        z-index: -1;
+        transition: transform 0.22s ease, opacity 0.22s ease;
+    }
+    .projectx-cluster:hover {
+        transform: scale(1.12);
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.45);
+        z-index: 1000 !important;
+    }
+    .projectx-cluster:hover::before {
+        transform: scale(1.18);
+        opacity: 0.38;
+    }
+    .projectx-cluster:active {
+        transform: scale(0.96);
+    }
+
+    /* Size Tier: Small (2 - 5 properties) */
+    .projectx-cluster-small {
+        width: 44px;
+        height: 44px;
+        background: #0f172a;
+        border: 2.5px solid #ffffff;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.35);
+    }
+    .projectx-cluster-small .cluster-count {
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+    .projectx-cluster-small .cluster-sub {
+        font-size: 8px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        opacity: 0.85;
+    }
+
+    /* Size Tier: Medium (6 - 15 properties) */
+    .projectx-cluster-medium {
+        width: 52px;
+        height: 52px;
+        background: #0f172a;
+        border: 2.5px solid #ffffff;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.4);
+    }
+    .projectx-cluster-medium::before {
+        inset: -5px;
+        background: #1e293b;
+        opacity: 0.3;
+    }
+    .projectx-cluster-medium .cluster-count {
+        font-size: 15px;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+    .projectx-cluster-medium .cluster-sub {
+        font-size: 8.5px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        opacity: 0.9;
+    }
+
+    /* Size Tier: Large (16+ properties) */
+    .projectx-cluster-large {
+        width: 60px;
+        height: 60px;
+        background: #090d16;
+        border: 3px solid #ffffff;
+        box-shadow: 0 8px 24px rgba(9, 13, 22, 0.45);
+    }
+    .projectx-cluster-large::before {
+        inset: -6px;
+        background: #0f172a;
+        opacity: 0.35;
+    }
+    .projectx-cluster-large .cluster-count {
+        font-size: 17px;
+        font-weight: 900;
+        line-height: 1.1;
+    }
+    .projectx-cluster-large .cluster-sub {
+        font-size: 9px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        opacity: 0.95;
+    }
+
+    /* Active / Selected cluster styling */
+    .projectx-cluster.active-cluster {
+        background: #047857 !important;
+        border-color: #ffffff !important;
+        box-shadow: 0 0 0 3px rgba(4, 120, 87, 0.4), 0 8px 25px rgba(4, 120, 87, 0.5) !important;
+    }
+
+    /* Spiderfy leg line enhancements */
+    .leaflet-cluster-spider-leg {
+        stroke: #0f172a !important;
+        stroke-width: 2px !important;
+        stroke-dasharray: 4, 4;
+        opacity: 0.6 !important;
     }
 
     /* View Toggle Buttons */
