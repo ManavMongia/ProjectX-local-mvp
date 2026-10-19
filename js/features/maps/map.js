@@ -1,17 +1,38 @@
 /**
  * Map Feature Module
- * Interactive Leaflet map view for property listings with marker synchronization and sidebar cards.
+ * Unified Search Your Home Experience:
+ * Combined Interactive Leaflet Map + Synchronized Side-List View with Full-Screen View Switching.
  */
 
-import { getListings, formatListingPrice, formatIntentLabel, calculateListingAge, isListingVerified, renderListingVerificationBadge, isListingSoldOut, renderListingSoldOutBadge, renderAvailabilityBadge, renderListingAgeBadge } from '../../services/listing-service.js';
+import { 
+    getListings, 
+    formatListingPrice, 
+    formatIntentLabel, 
+    calculateListingAge, 
+    isListingVerified, 
+    renderListingVerificationBadge, 
+    isListingSoldOut, 
+    renderListingSoldOutBadge, 
+    renderAvailabilityBadge, 
+    renderListingAgeBadge 
+} from '../../services/listing-service.js';
 import { searchLocation } from '../../services/location-service.js';
-import { syncSavedListings } from '../../services/user-service.js';
+import { syncSavedListings, getSavedListings } from '../../services/user-service.js';
 import { getCurrentUser } from '../../services/auth-service.js';
 import { showToast } from '../../ui/toast.js';
+import {
+    initCentralizedFilters,
+    getAppliedFilters,
+    setAppliedFilters,
+    openFiltersDrawer,
+    clearAllFilters,
+    DEFAULT_FILTERS
+} from '../search/centralized-filters.js';
+import { filterListingCard } from '../search/filters.js';
 
 function escHtml(str) {
     if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 export async function initBuyerMapPage() {
@@ -33,6 +54,8 @@ export async function initBuyerMapPage() {
     const latParam = urlParams.get('lat');
     const lngParam = urlParams.get('lng');
     const qParam = urlParams.get('q');
+    const intentParam = urlParams.get('intent');
+    const typeParam = urlParams.get('type');
     
     let initialCenter = [19.0760, 72.8777]; // Mumbai Center
     let initialZoom = 13;
@@ -45,6 +68,15 @@ export async function initBuyerMapPage() {
     const mapEl = document.getElementById('map');
     if (!mapEl) return;
 
+    // Destroy any prior map instance if re-initializing in SPA
+    if (window._currentLeafletMap) {
+        try {
+            window._currentLeafletMap.remove();
+        } catch {
+            // Safe teardown
+        }
+    }
+
     const map = L.map('map', {
         center: initialCenter,
         zoom: initialZoom,
@@ -52,6 +84,7 @@ export async function initBuyerMapPage() {
         maxBoundsViscosity: 1.0, 
         zoomControl: false
     });
+    window._currentLeafletMap = map;
     
     if (qParam) {
         setTimeout(() => {
@@ -71,60 +104,44 @@ export async function initBuyerMapPage() {
 
     mapEl.style.background = '#ebebeb';
 
-    // Load Listings from Supabase
-    const allListings = await getListings({ status: 'Active' });
-    
-    // Filter to those with coordinates
-    const markersData = allListings.filter(l => l.lat !== null && l.lng !== null).map(l => {
-        return { ...l, lat: parseFloat(l.lat), lng: parseFloat(l.lng) };
-    });
+    // ── Load Listings from Supabase ──
+    let rawListings = await getListings({ statuses: ['Active', 'sold_out'] });
+    if (!rawListings || rawListings.length === 0) {
+        rawListings = await getListings({ status: 'Active' });
+    }
+    const allListings = (rawListings || []).map(l => ({
+        ...l,
+        price: parseFloat(l.price) || 0,
+        lat: l.lat !== null && l.lat !== undefined ? parseFloat(l.lat) : null,
+        lng: l.lng !== null && l.lng !== undefined ? parseFloat(l.lng) : null
+    }));
 
+    // Identify listings with and without coordinates
+    const withCoords = allListings.filter(l => l.lat !== null && l.lng !== null);
     const withoutCoords = allListings.filter(l => l.lat === null || l.lng === null);
 
+    // Dynamic marker registry
     const markers = [];
     let activeListingId = null;
     let isProgrammaticMove = false;
-    let lastValidBounds = null;
+    let currentQuery = (qParam || '').toLowerCase().trim();
+    let currentSort = 'default';
+    let currentViewMode = 'split'; // 'split' | 'map' | 'list'
 
-    function selectListing(id, fromMap = false) {
-        activeListingId = id;
-        const markerObj = markers.find(m => m.data.id == id);
-        
-        if (!fromMap && markerObj) {
-            isProgrammaticMove = true;
-            map.flyTo([markerObj.data.lat, markerObj.data.lng], 15, { animate: true, duration: 0.5 });
-            markerObj.marker.openPopup();
-            setTimeout(() => { isProgrammaticMove = false; }, 600);
-        }
-
-        updateSidebar();
-        
-        // Reset all pins to default state
-        document.querySelectorAll('.map-pin-wrapper').forEach(wrapper => {
-            wrapper.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)';
-            wrapper.style.transform = 'translate(-50%, -50%) scale(1)';
-            wrapper.style.zIndex = '';
-        });
-
-        // Activate selected pin
-        const pinEl = document.getElementById(`pin-${id}`);
-        if (pinEl) {
-            pinEl.style.boxShadow = '0 6px 20px rgba(0,0,0,0.25)';
-            pinEl.style.transform = 'translate(-50%, -50%) scale(1.12)';
-            pinEl.style.zIndex = '1000';
-        }
-
-        if (fromMap) {
-            setTimeout(() => {
-                const cardEl = document.getElementById(`card-${id}`);
-                if (cardEl) {
-                    cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }, 100);
-        }
+    // Set initial filter state if URL params provided
+    if (intentParam) {
+        const applied = getAppliedFilters();
+        applied.intent = intentParam;
+        setAppliedFilters(applied);
+    }
+    if (typeParam) {
+        const applied = getAppliedFilters();
+        applied.selectedTypes = typeParam.split(',').map(s => s.trim());
+        setAppliedFilters(applied);
     }
 
-    markersData.forEach(p => {
+    // ── Build Leaflet Markers ──
+    function createMarkerForListing(p) {
         const icon = L.divIcon({
             className: 'bg-transparent border-none',
             html: `
@@ -165,10 +182,10 @@ export async function initBuyerMapPage() {
         });
 
         const marker = L.marker([p.lat, p.lng], { icon }).addTo(map);
-        
         const popupAge = calculateListingAge(p.created_at);
+
         marker.bindPopup(`
-            <div class="p-2 min-w-[150px]">
+            <div class="p-2 min-w-[170px] font-['Outfit']">
                 <div class="flex items-center justify-between gap-1 mb-1">
                     <h4 class="font-bold text-sm text-slate-900">${formatListingPrice(p.price, p.intent)}</h4>
                     <div class="flex items-center gap-1">
@@ -176,7 +193,7 @@ export async function initBuyerMapPage() {
                         ${renderListingVerificationBadge(isListingVerified(p))}
                     </div>
                 </div>
-                <p class="text-xs font-medium text-slate-500 mt-0.5">${escHtml(p.title)}</p>
+                <p class="text-xs font-medium text-slate-500 mt-0.5 truncate">${escHtml(p.title)}</p>
                 <div class="flex items-center gap-2 mt-2 text-slate-600 text-[10px] font-bold">
                     <span>${p.beds} BEDS</span> &bull; <span>${p.baths} BATHS</span>
                 </div>
@@ -184,19 +201,89 @@ export async function initBuyerMapPage() {
                     <span class="font-bold">Created on ${popupAge.date}</span>
                     ${renderListingAgeBadge(popupAge)}
                 </div>
-                <button onclick="window.location.href='property-details.html?id=${p.id}'" class="mt-3 w-full bg-slate-900 text-white px-3 py-1.5 rounded text-[10px] uppercase font-bold hover:bg-slate-800 transition-colors">View Details</button>
+                <button onclick="window.location.href='property-details.html?id=${p.id}'" class="mt-3 w-full bg-slate-900 text-white px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold hover:bg-slate-800 transition-colors">View Details</button>
             </div>
         `, { closeButton: false, offset: [0, -35] });
 
         marker.on('click', () => selectListing(p.id, true));
-        markers.push({ marker, data: p });
+        const markerObj = { id: p.id, marker, data: p };
+        markers.push(markerObj);
+        return markerObj;
+    }
+
+    withCoords.forEach(p => createMarkerForListing(p));
+
+    // Geocode missing coordinates on the fly for legacy database items
+    withoutCoords.forEach((l, index) => {
+        setTimeout(async () => {
+            const data = await searchLocation(l.location, { countrycodes: 'IN', limit: 1 });
+            if (data && data.length > 0) {
+                const item = data[0];
+                const lat = parseFloat(item.lat);
+                const lng = parseFloat(item.lon);
+                l.lat = lat;
+                l.lng = lng;
+                createMarkerForListing(l);
+                applyFiltersAndSync();
+            }
+        }, index * 1000);
     });
 
-    const sidebarContainer = document.querySelector('.overflow-y-auto.p-6');
-    const matchesCountEl = document.querySelector('#map-listings-count');
+    // ── Bidirectional Selection ──
+    function selectListing(id, fromMap = false) {
+        activeListingId = id;
+        const markerObj = markers.find(m => m.id == id);
+        
+        if (!fromMap && markerObj) {
+            isProgrammaticMove = true;
+            map.flyTo([markerObj.data.lat, markerObj.data.lng], 15, { animate: true, duration: 0.5 });
+            markerObj.marker.openPopup();
+            setTimeout(() => { isProgrammaticMove = false; }, 600);
+        }
 
+        // Visual highlight on map pins
+        document.querySelectorAll('.map-pin-wrapper').forEach(wrapper => {
+            wrapper.classList.remove('active-pin');
+            wrapper.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)';
+            wrapper.style.transform = 'translate(-50%, -50%) scale(1)';
+            wrapper.style.zIndex = '';
+        });
+
+        const pinEl = document.getElementById(`pin-${id}`);
+        if (pinEl) {
+            pinEl.classList.add('active-pin');
+            pinEl.style.boxShadow = '0 8px 24px rgba(15,23,42,0.3)';
+            pinEl.style.transform = 'translate(-50%, -50%) scale(1.15)';
+            pinEl.style.zIndex = '1000';
+        }
+
+        // Visual highlight and scroll on side-list card
+        document.querySelectorAll('.listing-card').forEach(card => {
+            card.classList.remove('ring-4', 'ring-slate-900', 'shadow-2xl', 'scale-[1.01]');
+            card.classList.add('border-slate-200');
+        });
+
+        const cardEl = document.getElementById(`card-${id}`);
+        if (cardEl) {
+            cardEl.classList.add('ring-4', 'ring-slate-900', 'shadow-2xl', 'scale-[1.01]');
+            cardEl.classList.remove('border-slate-200');
+            if (fromMap) {
+                setTimeout(() => {
+                    cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            }
+        }
+    }
+
+    window.clickSidebarCard = function(id) {
+        selectListing(id, false);
+    };
+
+    window.selectListing = selectListing;
+
+    // ── Favorite & Sharing Actions ──
     window.toggleMapFavorite = async function(e, id) {
-        e.stopPropagation();
+        if (e) e.stopPropagation();
         let saved = JSON.parse(localStorage.getItem('savedProperties') || '[]');
         if (saved.includes(id)) {
             saved = saved.filter(savedId => savedId != id);
@@ -205,75 +292,166 @@ export async function initBuyerMapPage() {
             saved.push(id);
             showToast('Added to favorites');
         }
+        localStorage.setItem('savedProperties', JSON.stringify(saved));
         
         const user = await getCurrentUser();
         await syncSavedListings(user ? user.id : null, saved);
-        updateSidebar();
+        applyFiltersAndSync();
     };
 
-    window.clickSidebarCard = function(id) {
-        selectListing(id, false);
+    window.shareMapListing = function(e, id) {
+        if (e) e.stopPropagation();
+        const shareUrl = `${window.location.origin}/property-details.html?id=${id}`;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                showToast('Property link copied to clipboard!');
+            }).catch(() => {
+                showToast(shareUrl);
+            });
+        } else {
+            showToast('Link: ' + shareUrl);
+        }
     };
 
-    function updateSidebar() {
-        if (isProgrammaticMove) return;
-
-        let bounds = map.getBounds();
-        const mapPane = document.getElementById('map-pane');
-        const mapHeight = mapPane ? mapPane.offsetHeight : 0;
-        if (window.innerWidth < 768) {
-            if (mapHeight > 150) {
-                lastValidBounds = bounds;
-            } else if (lastValidBounds) {
-                bounds = lastValidBounds;
+    // ── Filter Matching & Evaluation ──
+    function matchesListingCriteria(listing, criteria) {
+        const cardMock = {
+            dataset: {
+                id: String(listing.id),
+                title: listing.title || '',
+                location: listing.location || '',
+                type: listing.type || '',
+                beds: String(listing.beds || 0),
+                baths: String(listing.baths || 0),
+                price: String(listing.price || 0),
+                sqft: String(listing.sqft || 0),
+                intent: listing.intent || '',
+                verified: isListingVerified(listing) ? 'true' : 'false',
+                status: listing.status || 'Active',
+                availableFrom: listing.available_from || '',
+                createdAt: listing.created_at || '',
+                date: listing.created_at || ''
             }
-        }
+        };
 
-        const visibleListings = markersData.filter(p => bounds.contains([p.lat, p.lng]));
+        const combinedCriteria = {
+            ...criteria,
+            query: currentQuery || criteria.query || ''
+        };
+
+        return filterListingCard(cardMock, combinedCriteria);
+    }
+
+    function sortListingsData(list, sortVal) {
+        const sorted = [...list];
+        if (sortVal === 'price-low') {
+            return sorted.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+        }
+        if (sortVal === 'price-high') {
+            return sorted.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
+        }
+        if (sortVal === 'newest') {
+            return sorted.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        }
+        return sorted;
+    }
+
+    // ── Centralized Filtering and Synchronization Engine ──
+    const sidebarContainer = document.getElementById('property-side-list') || document.querySelector('.list-scroll-area') || document.querySelector('.overflow-y-auto.p-6');
+    const countText = document.getElementById('listings-count-text');
+    const matchesCountEl = document.getElementById('map-listings-count');
+    const toolbarCountEl = document.getElementById('map-listings-count-toolbar');
+
+    function applyFiltersAndSync() {
+        const applied = getAppliedFilters();
         
-        if (matchesCountEl) {
-            matchesCountEl.textContent = `${visibleListings.length} MATCHES FOUND`;
-        }
+        // 1. Evaluate matching listings
+        const matchingListings = allListings.filter(l => matchesListingCriteria(l, applied));
+        const matchingIds = new Set(matchingListings.map(l => l.id));
 
+        // 2. Synchronize Leaflet map markers
+        markers.forEach(({ id, marker }) => {
+            const el = marker.getElement();
+            if (matchingIds.has(id)) {
+                if (el) el.style.display = '';
+            } else {
+                if (el) el.style.display = 'none';
+                if (marker.isPopupOpen()) {
+                    marker.closePopup();
+                }
+            }
+        });
+
+        // 3. Sort matching listings
+        const sortedListings = sortListingsData(matchingListings, currentSort);
+
+        // 4. Update count indicators
+        const countMsg = `${sortedListings.length} ${sortedListings.length === 1 ? 'home' : 'homes'} found in Mumbai & Delhi`;
+        if (countText) countText.textContent = countMsg;
+        if (matchesCountEl) matchesCountEl.textContent = `${sortedListings.length} MATCHES FOUND`;
+        if (toolbarCountEl) toolbarCountEl.textContent = `${sortedListings.length} homes`;
+
+        // 5. Render side list cards
         if (!sidebarContainer) return;
 
-        if (visibleListings.length === 0) {
-            sidebarContainer.innerHTML = '<p class="text-slate-500 text-center mt-10">No properties found in this area.</p>';
+        if (sortedListings.length === 0) {
+            sidebarContainer.innerHTML = `
+              <div class="col-span-full py-12 px-6 text-center bg-white rounded-3xl border border-slate-200">
+                <span class="material-symbols-outlined text-[44px] text-slate-300 mb-2">filter_alt_off</span>
+                <h3 class="text-lg font-black text-slate-900 mb-1">No matching properties found</h3>
+                <p class="text-xs text-slate-500 mb-4 max-w-xs mx-auto">Try clearing search filters or adjusting your price and type criteria.</p>
+                <button type="button" id="map-clear-all-btn" class="px-5 py-2.5 bg-slate-900 text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-slate-800 transition-colors shadow-sm cursor-pointer">
+                  Clear All Filters
+                </button>
+              </div>
+            `;
+            document.getElementById('map-clear-all-btn')?.addEventListener('click', () => {
+                clearAllFilters();
+                const searchInput = document.getElementById('listing-search-input') || document.getElementById('map-location-search');
+                if (searchInput) searchInput.value = '';
+                currentQuery = '';
+                applyFiltersAndSync();
+            });
             return;
         }
 
         let saved = JSON.parse(localStorage.getItem('savedProperties') || '[]');
 
-        sidebarContainer.innerHTML = visibleListings.map(l => {
-            const isSaved = saved.includes(l.id);
-            const isActive = activeListingId == l.id;
-            const activeClasses = isActive ? 'ring-4 ring-slate-900 shadow-2xl scale-[1.02]' : 'border-slate-100 hover:shadow-xl';
+        sidebarContainer.innerHTML = sortedListings.map(l => {
             const age = calculateListingAge(l.created_at);
-            
+            const isActive = activeListingId == l.id;
+            const activeClasses = isActive ? 'ring-4 ring-slate-900 shadow-2xl scale-[1.01]' : 'border-slate-200 hover:shadow-xl';
+            const isSaved = saved.includes(l.id);
+
             return `
-            <div id="card-${l.id}" class="listing-card cursor-pointer bg-white rounded-3xl border ${activeClasses} overflow-hidden transition-all duration-300" onclick="clickSidebarCard(${l.id})">
+            <div id="card-${l.id}" class="listing-card group cursor-pointer bg-white rounded-3xl border ${activeClasses} overflow-hidden transition-all duration-300" onclick="window.clickSidebarCard(${l.id})">
               <div class="aspect-[16/9] overflow-hidden relative bg-slate-100">
                 <img loading="lazy" src="${l.img || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80'}" class="w-full h-full object-cover transition-transform duration-700 ${isActive ? '' : 'group-hover:scale-105'}">
-                <div class="absolute top-4 left-4 flex items-center gap-1.5">
+                <div class="absolute top-4 left-4 flex items-center gap-1.5 z-10 flex-wrap">
                   <div class="bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm">${formatIntentLabel(l.intent)}</div>
-                  ${isListingSoldOut(l) ? renderListingSoldOutBadge(true) : ''}
+                  ${renderListingVerificationBadge(isListingVerified(l))}
+                  ${renderListingSoldOutBadge(isListingSoldOut(l))}
                 </div>
                 ${renderAvailabilityBadge(l) ? `<div class="absolute bottom-3 left-4 z-10">${renderAvailabilityBadge(l)}</div>` : ''}
+                <div class="absolute top-4 right-4 flex items-center gap-1.5 z-10">
+                  <button aria-label="Share Property" title="Share Property" class="w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow flex items-center justify-center text-slate-400 hover:text-blue-600 transition-colors" onclick="window.shareMapListing(event, ${l.id});">
+                    <span class="material-symbols-outlined text-[18px]">share</span>
+                  </button>
+                  <button aria-label="Report Listing" title="Report Listing" class="w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors" onclick="event.stopPropagation(); window.openReportModal('listing', ${l.id}, '${escHtml(l.title)}');">
+                    <span class="material-symbols-outlined text-[18px]">flag</span>
+                  </button>
+                  <button aria-label="Save Property" title="Save Property" class="w-8 h-8 rounded-full bg-white/90 backdrop-blur shadow flex items-center justify-center ${isSaved ? 'text-red-500' : 'text-slate-400 hover:text-red-500'} transition-colors" onclick="window.toggleMapFavorite(event, ${l.id});">
+                    <span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' ${isSaved ? '1' : '0'};">favorite</span>
+                  </button>
+                </div>
               </div>
               <div class="p-5">
-                <div class="flex justify-between items-start mb-1">
+                <div class="flex justify-between items-center mb-1">
                   <h3 class="text-xl font-black text-slate-900">${formatListingPrice(l.price, l.intent, { html: true })}</h3>
-                  <div class="flex items-center gap-2">
-                    <button class="transition-colors text-slate-200 hover:text-red-500 flex items-center justify-center" onclick="event.stopPropagation(); window.openReportModal('listing', ${l.id}, '${escHtml(l.title)}');" title="Report Listing">
-                      <span class="material-symbols-outlined text-[20px]">flag</span>
-                    </button>
-                    <button class="transition-colors ${isSaved ? 'text-red-500' : 'text-slate-200 hover:text-red-500'}" onclick="toggleMapFavorite(event, ${l.id})">
-                      <span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' ${isSaved ? '1' : '0'};">favorite</span>
-                    </button>
-                  </div>
+                  ${renderListingVerificationBadge(isListingVerified(l))}
                 </div>
-                <p class="text-slate-500 text-sm font-medium mb-4 truncate">${escHtml(l.title)}, ${escHtml(l.location)}</p>
-                <div class="flex flex-wrap items-center gap-y-2 gap-x-4 text-slate-400">
+                <p class="text-slate-500 text-sm font-medium mb-3 truncate">${escHtml(l.title)}, ${escHtml(l.location)}</p>
+                <div class="flex flex-wrap items-center gap-y-2 gap-x-4 text-slate-400 mb-3">
                   <div class="flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[18px]">bed</span>
                     <span class="text-xs font-black text-slate-900">${l.beds}</span>
@@ -287,14 +465,10 @@ export async function initBuyerMapPage() {
                     <span class="text-xs font-black text-slate-900">${(l.sqft || 0).toLocaleString()} <span class="font-normal text-slate-400">sqft</span></span>
                   </div>
                 </div>
-                <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <div class="flex items-center gap-2">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                      <span class="material-symbols-outlined text-[14px]">schedule</span> Created on ${age.date}
-                    </span>
-                    ${renderListingSoldOutBadge(isListingSoldOut(l))}
-                    ${renderListingVerificationBadge(isListingVerified(l))}
-                  </div>
+                <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[14px]">schedule</span> Created on ${age.date}
+                  </span>
                   ${renderListingAgeBadge(age)}
                 </div>
               </div>
@@ -302,154 +476,308 @@ export async function initBuyerMapPage() {
             `;
         }).join('');
 
-        document.querySelectorAll('.map-pin-wrapper').forEach(wrapper => {
-            wrapper.style.boxShadow = '0 2px 8px rgba(0,0,0,0.12)';
-            wrapper.style.transform = 'translate(-50%, -50%) scale(1)';
-            wrapper.style.zIndex = '';
-        });
         if (activeListingId) {
-            const pinEl = document.getElementById(`pin-${activeListingId}`);
-            if (pinEl) {
-                pinEl.style.boxShadow = '0 6px 20px rgba(0,0,0,0.25)';
-                pinEl.style.transform = 'translate(-50%, -50%) scale(1.12)';
-                pinEl.style.zIndex = '1000';
-            }
+            selectListing(activeListingId, false);
         }
     }
 
-    map.on('moveend', updateSidebar);
-    setTimeout(updateSidebar, 100);
-
-    // Geocode missing coordinates on the fly to support legacy listings
-    withoutCoords.forEach((l, index) => {
-        setTimeout(async () => {
-            const data = await searchLocation(l.location, { countrycodes: 'IN', limit: 1 });
-            if (data && data.length > 0) {
-                const item = data[0];
-                const lat = parseFloat(item.lat);
-                const lng = parseFloat(item.lon);
-                
-                const updatedListing = { ...l, lat, lng };
-                markersData.push(updatedListing);
-                
-                const icon = L.divIcon({
-                    className: 'bg-transparent border-none',
-                    html: `
-                      <div id="pin-${l.id}" class="map-pin-wrapper" style="
-                        position: relative;
-                        transform: translate(-50%, -50%);
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 5px;
-                        background: white;
-                        border: 2px solid ${l.intent === 'Rent' ? '#059669' : '#0f172a'};
-                        border-radius: 999px;
-                        padding: 4px 10px 4px 6px;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-                        cursor: pointer;
-                        transition: all 0.2s ease;
-                        white-space: nowrap;
-                      ">
-                        <div class="pin-dot" style="
-                          width: 8px;
-                          height: 8px;
-                          background: ${l.intent === 'Rent' ? '#059669' : '#0f172a'};
-                          border-radius: 50%;
-                          flex-shrink: 0;
-                          transition: all 0.2s ease;
-                        "></div>
-                        <span class="pin-label" style="
-                          font-family: Outfit, sans-serif;
-                          font-size: 12px;
-                          font-weight: 800;
-                          color: ${l.intent === 'Rent' ? '#059669' : '#0f172a'};
-                          letter-spacing: 0.01em;
-                        ">${formatMapPrice(l.price, l.intent)}</span>
-                      </div>
-                    `,
-                    iconSize: [0, 0],
-                    iconAnchor: [0, 0]
-                });
-                
-                const marker = L.marker([lat, lng], { icon }).addTo(map);
-                marker.bindPopup(`
-                    <div class="p-2 min-w-[150px]">
-                        <div class="flex items-center justify-between gap-1 mb-1">
-                            <h4 class="font-bold text-sm text-slate-900">${formatListingPrice(l.price, l.intent)}</h4>
-                            <div class="flex items-center gap-1">
-                                ${renderListingSoldOutBadge(isListingSoldOut(l))}
-                                ${renderListingVerificationBadge(isListingVerified(l))}
-                            </div>
-                        </div>
-                        <p class="text-xs font-medium text-slate-500 mt-0.5">${escHtml(l.title)}</p>
-                        <div class="flex items-center gap-2 mt-2 text-slate-600 text-[10px] font-bold">
-                            <span>${l.beds} BEDS</span> &bull; <span>${l.baths} BATHS</span>
-                        </div>
-                        <button onclick="window.location.href='property-details.html?id=${l.id}'" class="mt-3 w-full bg-slate-900 text-white px-3 py-1.5 rounded text-[10px] uppercase font-bold hover:bg-slate-800 transition-colors">View Details</button>
-                    </div>
-                `, { closeButton: false, offset: [0, -35] });
-                
-                marker.on('click', () => selectListing(l.id, true));
-                markers.push({ marker, data: updatedListing });
-                updateSidebar();
-            }
-        }, index * 1000);
+    // Initialize centralized filters with re-render callback
+    initCentralizedFilters({
+        onApply: () => {
+            applyFiltersAndSync();
+        }
     });
 
-    // Map Search
-    const searchInput = document.getElementById('map-location-search');
-    const searchBtn = document.getElementById('map-search-btn');
+    // ── Search Input (Title, City, Neighborhood) & Autocomplete ──
+    const searchInput = document.getElementById('listing-search-input') || document.getElementById('map-location-search');
+    const searchClearBtn = document.getElementById('search-clear-btn');
     const resultsContainer = document.getElementById('map-search-results');
     let debounceTimer;
 
-    if (searchBtn && searchInput) {
-        searchBtn.onclick = async () => {
-            const val = searchInput.value.trim();
-            if (val) {
-                const data = await searchLocation(val, { countrycodes: 'IN', limit: 1 });
-                if (data.length > 0) {
-                    const item = data[0];
-                    map.flyTo([item.lat, item.lon], 15, { animate: true, duration: 1 });
-                    showToast(`Showing results near ${item.display_name.split(',')[0]}`);
-                }
-            }
-        };
-        searchInput.onkeypress = (e) => { if (e.key === 'Enter') searchBtn.click(); };
+    if (searchInput) {
+        if (qParam) searchInput.value = qParam;
 
-        if (resultsContainer) {
-            searchInput.addEventListener('input', (e) => {
+        const handleSearchInput = (e) => {
+            currentQuery = e.target.value.toLowerCase().trim();
+            if (searchClearBtn) {
+                searchClearBtn.classList.toggle('hidden', currentQuery.length === 0);
+            }
+            applyFiltersAndSync();
+
+            // Geocoding suggestions if query >= 3 chars
+            if (resultsContainer) {
                 clearTimeout(debounceTimer);
-                const query = e.target.value.trim();
-                if (query.length < 3) { resultsContainer.classList.add('hidden'); return; }
-                
+                if (currentQuery.length < 3) {
+                    resultsContainer.classList.add('hidden');
+                    return;
+                }
                 debounceTimer = setTimeout(async () => {
-                    const data = await searchLocation(query, { countrycodes: 'IN', limit: 5 });
+                    const data = await searchLocation(currentQuery, { countrycodes: 'IN', limit: 4 });
                     resultsContainer.innerHTML = '';
-                    if (data.length === 0) {
-                        resultsContainer.innerHTML = '<div class="p-4 text-sm text-slate-500 font-medium">No locations found.</div>';
-                    } else {
+                    if (data && data.length > 0) {
                         data.forEach(item => {
                             const div = document.createElement('div');
-                            div.className = 'px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 transition-colors flex items-center gap-3';
-                            div.innerHTML = `<span class="material-symbols-outlined text-slate-400 text-[18px]">location_on</span><span class="text-xs font-medium text-slate-700 truncate" title="${item.display_name}">${item.display_name}</span>`;
+                            div.className = 'px-4 py-2.5 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-0 transition-colors flex items-center gap-2.5';
+                            div.innerHTML = `<span class="material-symbols-outlined text-slate-400 text-[18px]">location_on</span><span class="text-xs font-semibold text-slate-700 truncate" title="${item.display_name}">${item.display_name}</span>`;
                             div.onclick = () => {
                                 searchInput.value = item.display_name.split(',')[0];
+                                currentQuery = searchInput.value.toLowerCase().trim();
                                 resultsContainer.classList.add('hidden');
                                 map.flyTo([item.lat, item.lon], 15, { animate: true, duration: 1 });
                                 showToast(`Showing results near ${item.display_name.split(',')[0]}`);
+                                applyFiltersAndSync();
                             };
                             resultsContainer.appendChild(div);
                         });
+                        resultsContainer.classList.remove('hidden');
+                        resultsContainer.classList.add('flex');
+                    } else {
+                        resultsContainer.classList.add('hidden');
                     }
-                    resultsContainer.classList.remove('hidden');
-                    resultsContainer.classList.add('flex');
                 }, 300);
-            });
-            document.addEventListener('click', (e) => {
-                if (!searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
-                    resultsContainer.classList.add('hidden');
-                }
+            }
+        };
+
+        searchInput.addEventListener('input', handleSearchInput);
+        if (searchClearBtn) {
+            searchClearBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                currentQuery = '';
+                searchClearBtn.classList.add('hidden');
+                if (resultsContainer) resultsContainer.classList.add('hidden');
+                applyFiltersAndSync();
             });
         }
+
+        const searchBtn = document.getElementById('find-homes-btn') || document.getElementById('map-search-btn');
+        if (searchBtn) {
+            searchBtn.addEventListener('click', () => {
+                applyFiltersAndSync();
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (resultsContainer && !searchInput.contains(e.target) && !resultsContainer.contains(e.target)) {
+                resultsContainer.classList.add('hidden');
+            }
+        });
+    }
+
+    // ── Quick Intent Buttons ──
+    document.querySelectorAll('.intent-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            document.querySelectorAll('.intent-btn').forEach(b => {
+                b.classList.remove('bg-slate-900', 'text-white');
+                b.classList.add('bg-slate-100', 'text-slate-500');
+            });
+            btn.classList.add('bg-slate-900', 'text-white');
+            btn.classList.remove('bg-slate-100', 'text-slate-500');
+
+            const intentVal = btn.dataset.intent === 'all' ? 'all' : btn.dataset.intent;
+            const applied = getAppliedFilters();
+            applied.intent = intentVal;
+            setAppliedFilters(applied);
+            applyFiltersAndSync();
+        });
+    });
+
+    // ── Sorting Dropdown ──
+    const sortDropdown = document.getElementById('sort-dropdown');
+    if (sortDropdown) {
+        sortDropdown.addEventListener('change', (e) => {
+            currentSort = e.target.value;
+            applyFiltersAndSync();
+        });
+    }
+
+    // ── View Switching Logic: Combined View, Full Map, Full List ──
+    function setView(mode) {
+        currentViewMode = mode;
+        const mapPane = document.getElementById('map-pane');
+        const listPane = document.getElementById('list-pane');
+        const sideList = document.getElementById('property-side-list');
+
+        ['split', 'map', 'list'].forEach(m => {
+            const btn = document.getElementById(`toggle-${m}`);
+            if (!btn) return;
+            const isActive = (m === mode);
+            btn.classList.toggle('active', isActive);
+            btn.classList.toggle('text-slate-500', !isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        });
+
+        if (window.innerWidth >= 768) {
+            // Desktop view modes
+            if (mode === 'split') {
+                if (mapPane) {
+                    mapPane.style.display = 'block';
+                    mapPane.classList.remove('w-full');
+                    mapPane.classList.add('flex-1');
+                }
+                if (listPane) {
+                    listPane.style.display = 'flex';
+                    listPane.classList.remove('w-full', 'max-w-none');
+                    listPane.classList.add('md:w-[480px]', 'lg:w-[520px]');
+                }
+                if (sideList) {
+                    sideList.classList.remove('full-list-grid');
+                }
+            } else if (mode === 'map') {
+                if (listPane) {
+                    listPane.style.display = 'none';
+                }
+                if (mapPane) {
+                    mapPane.style.display = 'block';
+                    mapPane.classList.remove('flex-1');
+                    mapPane.classList.add('w-full');
+                }
+            } else if (mode === 'list') {
+                if (mapPane) {
+                    mapPane.style.display = 'none';
+                }
+                if (listPane) {
+                    listPane.style.display = 'flex';
+                    listPane.classList.remove('md:w-[480px]', 'lg:w-[520px]');
+                    listPane.classList.add('w-full', 'max-w-none');
+                }
+                if (sideList) {
+                    sideList.classList.add('full-list-grid');
+                }
+            }
+        }
+
+        // Trigger Leaflet map redraw on layout change
+        if (map) {
+            map.invalidateSize();
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 300);
+        }
+    }
+
+    ['split', 'map', 'list'].forEach(mode => {
+        const btn = document.getElementById(`toggle-${mode}`);
+        if (btn) {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                setView(mode);
+            });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                setView(mode);
+            });
+        }
+    });
+
+    window.setMapViewMode = setView;
+
+    // ── Mobile Bottom Sheet (Screen < 768px) ──
+    const SNAP_PEEK = 80;
+    const SNAP_HALF = Math.round(window.innerHeight * 0.52);
+    const SNAP_FULL = window.innerHeight - 56;
+
+    let currentSnap = SNAP_HALF;
+    let isDragging = false;
+    let startY = 0;
+    let startHeight = 0;
+
+    function isMobile() { return window.innerWidth < 768; }
+
+    function setSheetHeight(h, animate = true) {
+        if (!isMobile()) return;
+        const listPane = document.getElementById('list-pane');
+        const mapPane = document.getElementById('map-pane');
+        if (!listPane || !mapPane) return;
+
+        const clamped = Math.max(SNAP_PEEK, Math.min(h, SNAP_FULL));
+        listPane.style.transition = animate ? 'height 0.3s cubic-bezier(0.32, 0.72, 0, 1)' : 'none';
+        listPane.style.height = clamped + 'px';
+
+        const mapH = Math.max(40, window.innerHeight - clamped - 56);
+        mapPane.style.height = mapH + 'px';
+        mapPane.style.display = '';
+
+        if (animate) {
+            setTimeout(() => {
+                if (map) map.invalidateSize();
+            }, 320);
+        }
+    }
+
+    function initBottomSheet() {
+        if (!isMobile()) return;
+        const handle = document.getElementById('drag-handle');
+        const listPane = document.getElementById('list-pane');
+        if (!handle || !listPane) return;
+
+        setSheetHeight(SNAP_HALF, false);
+
+        function startDrag(clientY) {
+            isDragging = true;
+            startY = clientY;
+            startHeight = listPane.getBoundingClientRect().height;
+            listPane.style.transition = 'none';
+        }
+
+        function doDrag(clientY) {
+            if (!isDragging) return;
+            const dy = startY - clientY;
+            setSheetHeight(startHeight + dy, false);
+        }
+
+        function endDrag() {
+            if (!isDragging) return;
+            isDragging = false;
+            const h = listPane.getBoundingClientRect().height;
+            const snaps = [SNAP_PEEK, SNAP_HALF, SNAP_FULL];
+            const closest = snaps.reduce((a, b) => Math.abs(b - h) < Math.abs(a - h) ? b : a);
+            currentSnap = closest;
+            setSheetHeight(closest, true);
+
+            if (closest === SNAP_FULL) setView('list');
+            else if (closest === SNAP_PEEK) setView('map');
+            else setView('split');
+        }
+
+        handle.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0 && e.pointerType === 'mouse') return;
+            startDrag(e.clientY);
+            handle.setPointerCapture(e.pointerId);
+        });
+
+        handle.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            doDrag(e.clientY);
+        });
+
+        handle.addEventListener('pointerup', (e) => {
+            if (!isDragging) return;
+            endDrag();
+            try { handle.releasePointerCapture(e.pointerId); } catch {}
+        });
+
+        handle.addEventListener('pointercancel', (e) => {
+            if (!isDragging) return;
+            endDrag();
+        });
+    }
+
+    initBottomSheet();
+
+    window.addEventListener('resize', () => {
+        if (isMobile()) {
+            setSheetHeight(currentSnap, false);
+        } else {
+            setView(currentViewMode);
+        }
+        if (map) map.invalidateSize();
+    });
+
+    // ── Initial Render ──
+    applyFiltersAndSync();
+
+    if (!isMobile()) {
+        setView('split');
     }
 }
