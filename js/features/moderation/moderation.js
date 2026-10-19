@@ -23,8 +23,14 @@ export function initAdminPanelInteractions() {
             button.addEventListener('click', () => showToast('All queue items are currently loaded.'));
         } else if (text.includes('View All Users')) {
             button.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-        } else if (text.includes('Export')) {
-            button.addEventListener('click', () => showToast('Admin report prepared for export.'));
+        } else if (button.id === 'admin-export-btn' || text.includes('Export') || button.querySelector('.material-symbols-outlined')?.textContent.trim() === 'download') {
+            button.addEventListener('click', async () => {
+                const { triggerAdminExcelExport } = await import('../../services/admin-export-service.js');
+                await triggerAdminExcelExport({
+                    showToast,
+                    buttonElement: button
+                });
+            });
         } else if (text.includes('Invite')) {
             button.addEventListener('click', () => showToast('Invite workflow opened.'));
         }

@@ -94,7 +94,7 @@
 <p class="font-body-lg text-body-lg text-on-surface-variant mt-unit">Manage users, oversee broker verification, and monitor platform integrity.</p>
 </div>
 <div class="flex items-center gap-stack-sm">
-<button class="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container-low transition-colors flex items-center gap-2">
+<button id="admin-export-btn" title="Export to Excel" aria-label="Export to Excel" class="bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-2 font-body-sm text-body-sm text-on-surface hover:bg-surface-container-low transition-colors flex items-center gap-2">
 <span class="material-symbols-outlined text-[18px]">download</span>
                         Export Log
                     </button>
@@ -300,6 +300,7 @@ Loading platform user profiles...
 
 <script type="module">
 import { supabase } from './lib/supabase.js';
+import { triggerAdminExcelExport } from './js/services/admin-export-service.js';
 
 function showAdminToast(msg, isError = false) {
   let t = document.getElementById('admin-toast');
@@ -363,6 +364,20 @@ async function checkAuth() {
   setupFilterTabs();
   loadListingsModeration();
   loadReports();
+  setupAdminExport();
+}
+
+function setupAdminExport() {
+  const exportBtn = document.getElementById('admin-export-btn');
+  if (exportBtn) {
+    exportBtn.onclick = async () => {
+      await triggerAdminExcelExport({
+        supabaseClient: supabase,
+        showToast: showAdminToast,
+        buttonElement: exportBtn
+      });
+    };
+  }
 }
 
 function setupFilterTabs() {
