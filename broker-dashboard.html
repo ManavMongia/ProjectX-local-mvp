@@ -411,12 +411,30 @@
     <div id="tab-leads" class="tab-content hidden">
         <header class="flex justify-between items-center mb-stack-lg gap-4">
             <div>
-                <h1 class="font-h2 text-h2 text-primary">Leads & Messages</h1>
-                <p class="font-body-sm text-body-sm text-on-surface-variant mt-unit">Respond to potential buyers and track viewing requests.</p>
+                <h1 class="font-h2 text-h2 text-primary">Leads & Inquiries</h1>
+                <p class="font-body-sm text-body-sm text-on-surface-variant mt-unit">Track buyer and tenant progress from initial inquiry through site visits and follow-ups.</p>
             </div>
         </header>
         <section class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm flex flex-col h-full min-h-[500px]">
-            <div id="inquiries-list-full" class="overflow-y-auto flex-1 p-2">
+            <!-- Leads Filter & Search Bar -->
+            <div class="p-4 border-b border-outline-variant bg-surface-container-low flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                <!-- Status Filter Tabs -->
+                <div class="flex flex-wrap gap-1.5 items-center">
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mr-1">Status:</span>
+                    <button class="lead-status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-slate-900 text-white transition-colors" data-status="All">All Leads</button>
+                    <button class="lead-status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="New Lead">New Lead</button>
+                    <button class="lead-status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Site Visit Requested">Site Visit Requested</button>
+                    <button class="lead-status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Site Visit Done">Site Visit Done</button>
+                    <button class="lead-status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Follow-up">Follow-up</button>
+                    <button class="lead-status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Not Interested">Not Interested</button>
+                </div>
+                <!-- Search Input -->
+                <div class="relative w-full sm:w-64">
+                    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                    <input type="text" id="leads-search-input" placeholder="Search buyer, property, note..." class="w-full bg-surface-bright border border-outline-variant rounded-lg pl-8 pr-3 py-1.5 text-xs text-on-background focus:outline-none focus:ring-2 focus:ring-primary font-medium" />
+                </div>
+            </div>
+            <div id="inquiries-list-full" class="overflow-y-auto flex-1 p-3">
                 <!-- Injected by JS -->
             </div>
         </section>
