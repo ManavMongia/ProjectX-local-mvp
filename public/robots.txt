@@ -1,0 +1,29 @@
+# robots.txt for https://project-x-local-mvp.vercel.app
+
+User-agent: *
+Allow: /
+Allow: /properties.html
+Allow: /map.html
+Allow: /sell.html
+Allow: /terms.html
+Allow: /privacy.html
+Allow: /sitemap.html
+Allow: /property-details.html
+Allow: /sitemap.xml
+
+# Disallow private dashboards, user profiles, and authentication flows
+Disallow: /login.html
+Disallow: /signup.html
+Disallow: /staff-login.html
+Disallow: /broker-dashboard.html
+Disallow: /admin-panel.html
+Disallow: /employee-panel.html
+Disallow: /profile.html
+Disallow: /my-property.html
+Disallow: /rental-agreement.html
+Disallow: /maintenance.html
+Disallow: /setup.html
+Disallow: /shared-filter.html
+Disallow: /signup
+
+Sitemap: https://project-x-local-mvp.vercel.app/sitemap.xml
