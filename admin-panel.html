@@ -204,14 +204,26 @@ Loading platform user profiles...
 </div>
 <span class="bg-primary text-on-primary font-label-caps text-[10px] px-2 py-0.5 rounded-full" id="active-listings-badge">... Active</span>
 </div>
-<div class="px-stack-md pt-stack-sm flex flex-wrap gap-2 border-b border-outline-variant pb-2 bg-surface-container-low">
-  <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-slate-900 text-white transition-colors" data-status="All">All</button>
-  <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Pending">Pending</button>
-  <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Active">Active</button>
-  <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Flagged">Flagged</button>
+<div class="px-stack-md pt-stack-sm flex flex-col sm:flex-row gap-2 border-b border-outline-variant pb-2 bg-surface-container-low sm:items-center sm:justify-between">
+  <div class="flex flex-wrap gap-1.5 items-center">
+    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-slate-900 text-white transition-colors" data-status="All">All</button>
+    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Pending">Pending</button>
+    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Under Review">Under Review</button>
+    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Active">Approved</button>
+    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Rejected">Rejected</button>
+    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Suspended">Suspended</button>
+    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Flagged">Flagged</button>
+  </div>
+  <div class="relative w-full sm:w-64 mt-2 sm:mt-0">
+    <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+    <input type="text" id="admin-listing-search" placeholder="Search title, location, ID..." class="w-full bg-surface-bright border border-outline-variant rounded-lg pl-8 pr-3 py-1.5 text-xs text-on-background focus:outline-none focus:ring-2 focus:ring-primary font-medium" />
+  </div>
 </div>
 <div class="p-stack-md flex flex-col gap-stack-sm flex-1" id="listings-moderation-list">
-<div class="text-center py-8 text-on-surface-variant text-sm">Loading recent listings...</div>
+  <div class="text-center py-8 text-on-surface-variant text-sm">Loading recent listings...</div>
+</div>
+</div>
+
 <!-- Reported Issues Card -->
 <div class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm flex flex-col flex-1 mt-6">
   <div class="p-stack-md border-b border-outline-variant flex items-center justify-between bg-surface-container-low">
@@ -239,8 +251,6 @@ Loading platform user profiles...
       </tbody>
     </table>
   </div>
-</div>
-</div>
 </div>
 </div>
 
@@ -301,6 +311,13 @@ Loading platform user profiles...
 <script type="module">
 import { supabase } from './lib/supabase.js';
 import { triggerAdminExcelExport } from './js/services/admin-export-service.js';
+import { 
+  fetchModerationListings, 
+  updateListingModerationStatus, 
+  assignListingEmployee,
+  STATUS_BADGE_CLASSES,
+  STATUS_DISPLAY_LABELS
+} from './js/services/moderation-service.js';
 
 function showAdminToast(msg, isError = false) {
   let t = document.getElementById('admin-toast');
@@ -337,6 +354,7 @@ function getRelativeTime(isoString) {
 // Check session & role on boot
 let session = null;
 let currentStatusFilter = 'All';
+let adminSearchQuery = '';
 async function checkAuth() {
   const { data } = await supabase.auth.getSession();
   session = data.session;
@@ -395,6 +413,14 @@ function setupFilterTabs() {
       loadListingsModeration();
     });
   });
+
+  const searchInput = document.getElementById('admin-listing-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      adminSearchQuery = e.target.value.trim();
+      loadListingsModeration();
+    });
+  }
 }
 
 // Logout handler
@@ -610,24 +636,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Updating...';
+
       try {
-        const remarksToSend = remarks || 'No remarks provided.';
-        const { error } = await supabase
-          .from('listings')
-          .update({ status: newStatus })
-          .eq('id', id);
-
-        if (error) throw error;
-
-        // Log the change
-        if (window.logListingStatusChange) {
-          await window.logListingStatusChange(id, oldStatus, newStatus, remarksToSend);
-        }
-
-        // Send notification
-        if (window.sendBrokerNotification) {
-          await window.sendBrokerNotification(brokerId, title, oldStatus, newStatus, remarksToSend);
-        }
+        await updateListingModerationStatus({
+          listingId: id,
+          oldStatus,
+          newStatus,
+          changedByUserId: session.user.id,
+          userRole: 'Admin',
+          reason: remarks,
+          brokerId,
+          listingTitle: title
+        }, supabase);
 
         showAdminToast(`✓ Status updated to ${newStatus === 'Active' ? 'Approved' : newStatus}`);
         
@@ -643,6 +665,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (err) {
         console.error(err);
         showAdminToast(err.message, true);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Update';
       }
     };
   }
@@ -650,159 +675,157 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 4. Property Listings Moderation Queue
 async function loadListingsModeration() {
-  const { data: staff, error: staffError } = await supabase
-      .from('profiles')
-      .select('id, full_name, role')
-      .in('role', ['Employee', 'Admin'])
-      .order('full_name');
-  if (staffError) console.error("Failed to load staff list:", staffError.message);
-  const staffList = staff || [];
-
-  let query = supabase.from('listings').select('*').order('created_at', { ascending: false });
-  if (currentStatusFilter !== 'All') {
-    query = query.eq('status', currentStatusFilter);
-  }
-
-  const { data: listings, error } = await query.limit(20);
-
   const container = document.getElementById('listings-moderation-list');
-  if (error || !listings || listings.length === 0) {
-    container.innerHTML = `
-      <div class="text-center py-8 text-on-surface-variant text-sm">
-        No property listings available with status "${currentStatusFilter}".
-      </div>`;
-    return;
-  }
+  if (!container) return;
 
-  container.innerHTML = listings.map(lst => {
-    const priceStr = new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(lst.price);
+  try {
+    const { data: staff, error: staffError } = await supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .in('role', ['Employee', 'Admin'])
+        .order('full_name');
+    if (staffError) console.error("Failed to load staff list:", staffError.message);
+    const staffList = staff || [];
 
-    const imageSrc = lst.img || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=120&q=80';
+    const listings = await fetchModerationListings({
+      statusFilter: currentStatusFilter,
+      searchQuery: adminSearchQuery,
+      limit: 50
+    }, supabase);
 
-    let badgeClass = 'bg-surface-container-high text-on-surface-variant';
-    let statusLabel = lst.status === 'Active' ? 'Approved' : lst.status;
-    if (lst.status === 'Active') badgeClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
-    else if (lst.status === 'Pending') badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
-    else if (lst.status === 'Under Review') badgeClass = 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
-    else if (lst.status === 'Rejected') badgeClass = 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
-    else if (lst.status === 'Suspended') badgeClass = 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300';
-    else if (lst.status === 'Sold') badgeClass = 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    if (!listings || listings.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-8 text-on-surface-variant text-sm">
+          No property listings found matching the current filter.
+        </div>`;
+      return;
+    }
 
-    return `
-      <div class="flex flex-col md:flex-row md:items-center justify-between p-4 border border-outline-variant rounded-xl hover:shadow-md transition-shadow bg-surface-bright gap-4">
-        <!-- Left section: Thumbnail + Title + Info -->
-        <div class="flex items-center gap-4 flex-1">
-          <img src="${imageSrc}" class="w-16 h-16 object-cover rounded-lg border border-outline-variant bg-surface-container" alt="Listing Image"/>
-          <div>
-            <div class="font-body-md font-bold text-on-background text-base line-clamp-1">${lst.title}</div>
-            <div class="font-body-sm text-on-surface-variant text-xs flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 font-medium">
-              <span>${lst.location}</span> • 
-              <span class="font-semibold text-primary">${priceStr}</span> • 
-              <span class="${badgeClass} px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">${statusLabel}</span>
+    container.innerHTML = listings.map(lst => {
+      const priceStr = new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        maximumFractionDigits: 0
+      }).format(lst.price);
+
+      const imageSrc = lst.img || 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=120&q=80';
+      const badgeClass = STATUS_BADGE_CLASSES[lst.status] || 'bg-surface-container-high text-on-surface-variant';
+      const statusLabel = STATUS_DISPLAY_LABELS[lst.status] || (lst.status === 'Active' ? 'Approved' : lst.status);
+
+      return `
+        <div class="flex flex-col md:flex-row md:items-center justify-between p-4 border border-outline-variant rounded-xl hover:shadow-md transition-shadow bg-surface-bright gap-4" data-id="${lst.id}">
+          <!-- Left section: Thumbnail + Title + Info -->
+          <div class="flex items-center gap-4 flex-1 min-w-0">
+            <img src="${imageSrc}" class="w-16 h-16 object-cover rounded-lg border border-outline-variant bg-surface-container shrink-0" alt="Listing Image"/>
+            <div class="min-w-0 flex-1">
+              <div class="font-body-md font-bold text-on-background text-base truncate">${escHtml(lst.title)}</div>
+              <div class="font-body-sm text-on-surface-variant text-xs flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 font-medium">
+                <span>${escHtml(lst.location)}</span> • 
+                <span class="font-semibold text-primary">${priceStr}</span> • 
+                <span class="${badgeClass} px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">${statusLabel}</span>
+              </div>
+              <div class="text-[10px] text-slate-400 mt-1 font-semibold flex items-center gap-2">
+                <span>Broker: <span class="font-mono text-slate-600">${lst.broker_id || 'System'}</span></span>
+                <span>• ID: <span class="font-mono text-slate-600">${lst.id}</span></span>
+              </div>
             </div>
-            <div class="text-[10px] text-slate-400 mt-1 font-semibold">
-              Broker: <span class="font-mono">${lst.broker_id || 'System'}</span>
+          </div>
+
+          <!-- Right section: Assign Control & Status Control -->
+          <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full md:w-auto">
+            <!-- Assignee Dropdown -->
+            <div class="flex flex-col gap-1 w-full sm:w-44">
+              <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Assignee</label>
+              <select class="admin-assign-select bg-surface-container border border-outline-variant rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary font-medium text-slate-700 w-full" data-id="${lst.id}" data-title="${escHtml(lst.title)}">
+                <option value="">-- Unassigned --</option>
+                ${staffList.map(s => `<option value="${s.id}" ${lst.assigned_employee_id === s.id ? 'selected' : ''}>${escHtml(s.full_name)} (${s.role})</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- Status Dropdown -->
+            <div class="flex flex-col gap-1 w-full sm:w-40">
+              <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Status</label>
+              <select class="admin-status-select bg-surface-container border border-outline-variant rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary font-medium text-slate-700 w-full" data-id="${lst.id}" data-current="${lst.status}" data-title="${escHtml(lst.title)}" data-broker="${lst.broker_id || ''}">
+                ${['Draft', 'Pending', 'Under Review', 'Active', 'Rejected', 'Suspended'].map(st => `
+                  <option value="${st}" ${lst.status === st ? 'selected' : ''}>${st === 'Active' ? 'Approved (Active)' : st}</option>
+                `).join('')}
+                ${(lst.status === 'sold_out' || lst.status === 'Sold') ? `<option value="${lst.status}" selected>Sold Out</option>` : ''}
+              </select>
+            </div>
+
+            <!-- Preview / Delete Buttons -->
+            <div class="flex gap-2 self-end sm:self-center pt-2 sm:pt-0">
+              <button class="preview-listing-btn w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center hover:bg-slate-200 transition-colors" data-id="${lst.id}" title="Preview Listing">
+                <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+              </button>
+              <button class="delete-listing-btn w-9 h-9 rounded-lg bg-error-container text-on-error-container flex items-center justify-center hover:bg-error hover:text-on-error transition-colors" data-id="${lst.id}" data-title="${escHtml(lst.title)}" title="Delete Listing">
+                <span class="material-symbols-outlined text-[18px]">delete</span>
+              </button>
             </div>
           </div>
         </div>
+      `;
+    }).join('');
 
-        <!-- Right section: Assign Control & Status Control -->
-        <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full md:w-auto">
-          <!-- Assignee Dropdown -->
-          <div class="flex flex-col gap-1 w-full sm:w-44">
-            <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Assignee</label>
-            <select class="admin-assign-select bg-surface-container border border-outline-variant rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary font-medium text-slate-700 w-full" data-id="${lst.id}" data-title="${lst.title}">
-              <option value="">-- Unassigned --</option>
-              ${staffList.map(s => `<option value="${s.id}" ${lst.assigned_employee_id === s.id ? 'selected' : ''}>${s.full_name} (${s.role})</option>`).join('')}
-            </select>
-          </div>
+    // Bind Assignment Change
+    container.querySelectorAll('.admin-assign-select').forEach(select => {
+      select.onchange = async () => {
+        const id = select.getAttribute('data-id');
+        const title = select.getAttribute('data-title');
+        const val = select.value || null;
 
-          <!-- Status Dropdown -->
-          <div class="flex flex-col gap-1 w-full sm:w-40">
-            <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Status</label>
-            <select class="admin-status-select bg-surface-container border border-outline-variant rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary font-medium text-slate-700 w-full" data-id="${lst.id}" data-current="${lst.status}" data-title="${lst.title}" data-broker="${lst.broker_id}">
-              ${['Draft', 'Pending', 'Under Review', 'Active', 'Rejected', 'Suspended', 'Sold'].map(st => `
-                <option value="${st}" ${lst.status === st ? 'selected' : ''}>${st === 'Active' ? 'Approved (Active)' : st}</option>
-              `).join('')}
-            </select>
-          </div>
+        try {
+          await assignListingEmployee({
+            listingId: id,
+            assignedEmployeeId: val,
+            userRole: 'Admin',
+            currentUserId: session.user.id
+          }, supabase);
 
-          <!-- Preview / Delete Buttons -->
-          <div class="flex gap-2 self-end sm:self-center pt-4 sm:pt-0">
-            <button class="preview-listing-btn w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center hover:bg-slate-200 transition-colors" data-id="${lst.id}" title="Preview Listing">
-              <span class="material-symbols-outlined text-[18px]">open_in_new</span>
-            </button>
-            <button class="delete-listing-btn w-9 h-9 rounded-lg bg-error-container text-on-error-container flex items-center justify-center hover:bg-error hover:text-on-error transition-colors" data-id="${lst.id}" data-title="${lst.title}" title="Delete Listing">
-              <span class="material-symbols-outlined text-[18px]">delete</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  // Bind Assignment Change
-  document.querySelectorAll('.admin-assign-select').forEach(select => {
-    select.onchange = async () => {
-      const id = select.getAttribute('data-id');
-      const title = select.getAttribute('data-title');
-      const val = select.value || null;
-
-      try {
-        const { error } = await supabase
-          .from('listings')
-          .update({ assigned_employee_id: val })
-          .eq('id', id);
-
-        if (error) throw error;
-        showAdminToast(`✓ Assignment updated for "${title}"`);
-        loadListingsModeration();
-      } catch (err) {
-        console.error(err);
-        showAdminToast(err.message, true);
-      }
-    };
-  });
-
-  // Bind Status Change
-  document.querySelectorAll('.admin-status-select').forEach(select => {
-    select.onchange = async () => {
-      const id = select.getAttribute('data-id');
-      const title = select.getAttribute('data-title');
-      const oldStatus = select.getAttribute('data-current');
-      const brokerId = select.getAttribute('data-broker');
-      const newStatus = select.value;
-
-      if (oldStatus === newStatus) return;
-
-      pendingAdminStatusUpdate = { id, title, oldStatus, newStatus, brokerId };
-
-      const modal = document.getElementById('admin-remarks-modal');
-      const modalTitle = document.getElementById('admin-remarks-modal-title');
-      const modalDesc = document.getElementById('admin-remarks-modal-desc');
-      const remarksInput = document.getElementById('admin-remarks-input');
-
-      if (modal) {
-        remarksInput.value = '';
-        modalTitle.textContent = `Update to ${newStatus === 'Active' ? 'Approved' : newStatus}`;
-        
-        if (newStatus === 'Rejected' || newStatus === 'Suspended') {
-          modalDesc.innerHTML = `<span class="text-red-500 font-semibold">Remarks/Reason are MANDATORY when status is Rejected or Suspended.</span>`;
-        } else {
-          modalDesc.textContent = `Please provide optional remarks/reason for this status change.`;
+          showAdminToast(`✓ Assignment updated for "${title}"`);
+          loadListingsModeration();
+        } catch (err) {
+          console.error(err);
+          showAdminToast(err.message, true);
         }
+      };
+    });
 
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-      }
-    };
-  });
+    // Bind Status Change
+    container.querySelectorAll('.admin-status-select').forEach(select => {
+      select.onchange = () => {
+        const id = select.getAttribute('data-id');
+        const title = select.getAttribute('data-title');
+        const oldStatus = select.getAttribute('data-current');
+        const brokerId = select.getAttribute('data-broker');
+        const newStatus = select.value;
 
-  document.querySelectorAll('.delete-listing-btn').forEach(btn => {
+        if (oldStatus === newStatus) return;
+
+        pendingAdminStatusUpdate = { id, title, oldStatus, newStatus, brokerId };
+
+        const modal = document.getElementById('admin-remarks-modal');
+        const modalTitle = document.getElementById('admin-remarks-modal-title');
+        const modalDesc = document.getElementById('admin-remarks-modal-desc');
+        const remarksInput = document.getElementById('admin-remarks-input');
+
+        if (modal) {
+          remarksInput.value = '';
+          modalTitle.textContent = `Update to ${newStatus === 'Active' ? 'Approved' : newStatus}`;
+          
+          if (newStatus === 'Rejected' || newStatus === 'Suspended') {
+            modalDesc.innerHTML = `<span class="text-red-500 font-semibold">Remarks/Reason are MANDATORY when status is ${newStatus}.</span>`;
+          } else {
+            modalDesc.textContent = `Please provide optional remarks/reason for this status change.`;
+          }
+
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        }
+      };
+    });
+
+    document.querySelectorAll('.delete-listing-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-id');
       const title = btn.getAttribute('data-title');
@@ -819,12 +842,16 @@ async function loadListingsModeration() {
     });
   });
 
-  document.querySelectorAll('.preview-listing-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-id');
-      window.open(`/property-details.html?id=${id}&adminPreview=1`, '_blank');
+    container.querySelectorAll('.preview-listing-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        window.open(`/property-details.html?id=${id}&adminPreview=1`, '_blank');
+      });
     });
-  });
+  } catch (err) {
+    console.error('Failed to load listings moderation:', err);
+    container.innerHTML = `<div class="text-center py-8 text-error text-sm">Failed to load moderation listings.</div>`;
+  }
 }
 
 // 5. Staff User Creation Modal Logic

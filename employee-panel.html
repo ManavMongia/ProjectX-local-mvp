@@ -125,13 +125,22 @@
 <span class="font-body-sm text-body-sm text-on-surface-variant bg-surface-container px-2 py-1 rounded-md" id="pending-count-badge">... Pending</span>
 </div>
 <div class="flex flex-col gap-3 border-b border-outline-variant pb-4 mb-2 bg-surface-container-lowest">
-  <!-- Status Filter Row -->
-  <div class="flex flex-wrap gap-2 items-center">
-    <span class="text-xs font-semibold text-slate-500 mr-1 font-body-sm">Status:</span>
-    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-slate-900 text-white transition-colors" data-status="All">All</button>
-    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Pending">Pending</button>
-    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Active">Active</button>
-    <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Flagged">Flagged</button>
+  <!-- Status & Search Filter Row -->
+  <div class="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+    <div class="flex flex-wrap gap-1.5 items-center">
+      <span class="text-xs font-semibold text-slate-500 mr-1 font-body-sm">Status:</span>
+      <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-slate-900 text-white transition-colors" data-status="All">All</button>
+      <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Pending">Pending</button>
+      <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Under Review">Under Review</button>
+      <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Active">Approved</button>
+      <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Rejected">Rejected</button>
+      <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Suspended">Suspended</button>
+      <button class="status-filter-tab px-3 py-1.5 text-xs font-bold rounded-full bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors" data-status="Flagged">Flagged</button>
+    </div>
+    <div class="relative w-full sm:w-64 mt-2 sm:mt-0">
+      <span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+      <input type="text" id="employee-listing-search" placeholder="Search title, location, ID..." class="w-full bg-surface-bright border border-outline-variant rounded-lg pl-8 pr-3 py-1.5 text-xs text-on-background focus:outline-none focus:ring-2 focus:ring-primary font-medium" />
+    </div>
   </div>
   <!-- Assignment Filter Row -->
   <div class="flex flex-wrap gap-2 items-center">
@@ -247,6 +256,14 @@
 </main>
 <script type="module">
 import { supabase } from './lib/supabase.js';
+import { 
+  fetchModerationListings, 
+  updateListingModerationStatus, 
+  assignListingEmployee,
+  getAllowedTransitions,
+  STATUS_BADGE_CLASSES,
+  STATUS_DISPLAY_LABELS
+} from './js/services/moderation-service.js';
 
 function showEmployeeToast(msg, isError = false) {
   let t = document.getElementById('employee-toast');
@@ -265,6 +282,7 @@ function showEmployeeToast(msg, isError = false) {
 let session = null;
 let currentStatusFilter = 'All';
 let currentAssignFilter = 'All';
+let employeeSearchQuery = '';
 
 async function checkAuth() {
   const { data } = await supabase.auth.getSession();
@@ -327,6 +345,14 @@ function setupFilterTabs() {
       loadReviewQueue();
     });
   });
+
+  const searchInput = document.getElementById('employee-listing-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      employeeSearchQuery = e.target.value.trim();
+      loadReviewQueue();
+    });
+  }
 }
 
 function setupAssignFilterTabs() {
@@ -344,40 +370,6 @@ function setupAssignFilterTabs() {
       loadReviewQueue();
     });
   });
-}
-
-function getPermittedTransitions(status) {
-  if (status === 'Pending') {
-    return [
-      { value: 'Pending', label: 'Pending' },
-      { value: 'Under Review', label: 'Under Review' }
-    ];
-  }
-  if (status === 'Under Review') {
-    return [
-      { value: 'Under Review', label: 'Under Review' },
-      { value: 'Active', label: 'Approved (Active)' },
-      { value: 'Rejected', label: 'Rejected' }
-    ];
-  }
-  if (status === 'Active') {
-    return [
-      { value: 'Active', label: 'Approved (Active)' },
-      { value: 'Under Review', label: 'Under Review' },
-      { value: 'Rejected', label: 'Rejected' }
-    ];
-  }
-  if (status === 'Rejected') {
-    return [
-      { value: 'Rejected', label: 'Rejected' },
-      { value: 'Under Review', label: 'Under Review' },
-      { value: 'Active', label: 'Approved (Active)' }
-    ];
-  }
-  return [
-    { value: status, label: status === 'Active' ? 'Approved' : status },
-    { value: 'Under Review', label: 'Under Review' }
-  ];
 }
 
 let pendingStatusUpdate = null;
@@ -408,29 +400,25 @@ document.addEventListener('DOMContentLoaded', () => {
       const remarks = document.getElementById('remarks-input').value.trim();
       const { id, title, oldStatus, newStatus, brokerId } = pendingStatusUpdate;
 
-      if (newStatus === 'Rejected' && !remarks) {
-        alert('Please provide a reason for rejecting this listing.');
+      if ((newStatus === 'Rejected' || newStatus === 'Suspended') && !remarks) {
+        alert('Please provide a reason for rejecting or suspending this listing.');
         return;
       }
 
+      submitRemarksBtn.disabled = true;
+      submitRemarksBtn.textContent = 'Updating...';
+
       try {
-        const remarksToSend = remarks || 'No remarks provided.';
-        const { error } = await supabase
-          .from('listings')
-          .update({ status: newStatus })
-          .eq('id', id);
-
-        if (error) throw error;
-
-        // Log the change
-        if (window.logListingStatusChange) {
-          await window.logListingStatusChange(id, oldStatus, newStatus, remarksToSend);
-        }
-
-        // Send notification
-        if (window.sendBrokerNotification) {
-          await window.sendBrokerNotification(brokerId, title, oldStatus, newStatus, remarksToSend);
-        }
+        await updateListingModerationStatus({
+          listingId: id,
+          oldStatus,
+          newStatus,
+          changedByUserId: session.user.id,
+          userRole: 'Employee',
+          reason: remarks,
+          brokerId,
+          listingTitle: title
+        }, supabase);
 
         showEmployeeToast(`✓ Status updated to ${newStatus === 'Active' ? 'Approved' : newStatus}`);
         
@@ -445,6 +433,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (err) {
         console.error(err);
         showEmployeeToast(err.message, true);
+      } finally {
+        submitRemarksBtn.disabled = false;
+        submitRemarksBtn.textContent = 'Submit Update';
       }
     };
   }
@@ -457,27 +448,22 @@ async function loadReviewQueue() {
       .from('listings')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'Pending');
-    document.getElementById('pending-count-badge').textContent = `${pendingCount || 0} Pending`;
+    const badge = document.getElementById('pending-count-badge');
+    if (badge) badge.textContent = `${pendingCount || 0} Pending`;
 
-    let query = supabase
-      .from('listings')
-      .select('*, assigned_employee:profiles!listings_assigned_employee_id_fkey(id, full_name)')
-      .order('created_at', { ascending: false });
+    const listings = await fetchModerationListings({
+      statusFilter: currentStatusFilter,
+      assignFilter: currentAssignFilter,
+      searchQuery: employeeSearchQuery,
+      limit: 50,
+      currentUserId: session?.user?.id
+    }, supabase);
 
-    if (currentStatusFilter !== 'All') {
-      query = query.eq('status', currentStatusFilter);
-    }
-
-    if (currentAssignFilter === 'Me') {
-      query = query.eq('assigned_employee_id', session.user.id);
-    } else if (currentAssignFilter === 'Unassigned') {
-      query = query.is('assigned_employee_id', null);
-    }
-
-    const { data: listings, error } = await query;
     const container = document.getElementById('listings-review-queue-list');
-    if (error || !listings || listings.length === 0) {
-      container.innerHTML = `<div class="text-center py-8 text-on-surface-variant text-sm">No listings found.</div>`;
+    if (!container) return;
+
+    if (!listings || listings.length === 0) {
+      container.innerHTML = `<div class="text-center py-8 text-on-surface-variant text-sm">No listings found matching filter.</div>`;
       return;
     }
 
@@ -491,17 +477,11 @@ async function loadReviewQueue() {
       const imageSrc = lst.img || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80';
       const timeStr = new Date(lst.created_at).toLocaleDateString() + ' ' + new Date(lst.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      let badgeClass = 'bg-surface-container-high text-on-surface-variant';
-      let statusLabel = lst.status === 'Active' ? 'Approved' : lst.status;
-      if (lst.status === 'Active') badgeClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300';
-      else if (lst.status === 'Pending') badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
-      else if (lst.status === 'Under Review') badgeClass = 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
-      else if (lst.status === 'Rejected') badgeClass = 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
-      else if (lst.status === 'Suspended') badgeClass = 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300';
-      else if (lst.status === 'Sold') badgeClass = 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+      const badgeClass = STATUS_BADGE_CLASSES[lst.status] || 'bg-surface-container-high text-on-surface-variant';
+      const statusLabel = STATUS_DISPLAY_LABELS[lst.status] || (lst.status === 'Active' ? 'Approved' : lst.status);
 
-      const isAssignedToMe = lst.assigned_employee_id === session.user.id;
-      const isUnassigned = lst.assigned_employee_id === null;
+      const isAssignedToMe = lst.assigned_employee_id === session?.user?.id;
+      const isUnassigned = lst.assigned_employee_id === null || lst.assigned_employee_id === undefined;
 
       let assignmentHtml = '';
       let actionsHtml = '';
@@ -509,26 +489,26 @@ async function loadReviewQueue() {
       if (isUnassigned) {
         assignmentHtml = `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Unassigned</span>`;
         actionsHtml = `
-          <button class="claim-btn flex-1 bg-slate-900 text-white py-2 rounded font-body-sm text-body-sm font-medium hover:bg-slate-800 transition-colors" data-id="${lst.id}" data-title="${lst.title}">
+          <button class="claim-btn flex-1 bg-slate-900 text-white py-2 rounded font-body-sm text-body-sm font-medium hover:bg-slate-800 transition-colors" data-id="${lst.id}" data-title="${escHtml(lst.title)}">
             Claim Review
           </button>
         `;
       } else if (isAssignedToMe) {
         assignmentHtml = `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Assigned to You</span>`;
         
-        const transitions = getPermittedTransitions(lst.status);
+        const transitions = getAllowedTransitions(lst.status, 'Employee', lst, session?.user?.id);
         actionsHtml = `
           <div class="flex items-center gap-2">
             <span class="text-xs font-semibold text-slate-500">Action:</span>
             <select class="status-transition-select bg-surface-container border border-outline-variant rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent font-medium" 
-                    data-id="${lst.id}" data-current="${lst.status}" data-title="${lst.title}" data-broker="${lst.broker_id}">
+                    data-id="${lst.id}" data-current="${lst.status}" data-title="${escHtml(lst.title)}" data-broker="${lst.broker_id || ''}">
               ${transitions.map(t => `<option value="${t.value}" ${t.value === lst.status ? 'selected' : ''}>${t.label}</option>`).join('')}
             </select>
           </div>
         `;
       } else {
         const assigneeName = lst.assigned_employee?.full_name || 'Another Staff';
-        assignmentHtml = `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Assigned to: ${assigneeName}</span>`;
+        assignmentHtml = `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Assigned to: ${escHtml(assigneeName)}</span>`;
         actionsHtml = `<div class="text-xs text-slate-400 font-medium italic">Assigned to another reviewer.</div>`;
       }
 
@@ -541,8 +521,8 @@ async function loadReviewQueue() {
             <div>
               <div class="flex justify-between items-start mb-1 flex-wrap gap-2">
                 <div>
-                  <h3 class="font-h3 text-h3 text-on-background text-lg font-bold">${lst.title}</h3>
-                  <p class="text-xs text-on-surface-variant">${lst.location}</p>
+                  <h3 class="font-h3 text-h3 text-on-background text-lg font-bold">${escHtml(lst.title)}</h3>
+                  <p class="text-xs text-on-surface-variant">${escHtml(lst.location)}</p>
                 </div>
                 <div class="flex items-center gap-2">
                   ${assignmentHtml}
@@ -552,7 +532,7 @@ async function loadReviewQueue() {
                   </span>
                 </div>
               </div>
-              <p class="font-body-sm text-body-sm text-on-surface-variant mb-2">Submitted by Broker: <span class="font-mono text-[10px] text-primary select-all">${lst.broker_id || 'System'}</span> • ${timeStr}</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant mb-2">Submitted by Broker: <span class="font-mono text-[10px] text-primary select-all">${lst.broker_id || 'System'}</span> • ID: <span class="font-mono text-[10px] text-slate-600">${lst.id}</span> • ${timeStr}</p>
               <div class="flex flex-wrap gap-4 font-body-sm text-body-sm text-on-background">
                 <span class="flex items-center gap-1"><span class="material-symbols-outlined text-outline text-[18px]">sell</span> ${priceStr}</span>
                 <span class="flex items-center gap-1"><span class="material-symbols-outlined text-outline text-[18px]">bed</span> ${lst.beds || 0} Beds</span>
@@ -561,7 +541,7 @@ async function loadReviewQueue() {
               </div>
             </div>
             <div class="flex flex-wrap gap-3 mt-4 items-center justify-between">
-              <button class="preview-btn flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 border border-slate-200 rounded font-body-sm text-body-sm font-medium hover:bg-slate-200 transition-colors" data-id="${lst.id}" data-title="${lst.title}">
+              <button class="preview-btn flex items-center gap-1.5 px-4 py-2 bg-slate-100 text-slate-700 border border-slate-200 rounded font-body-sm text-body-sm font-medium hover:bg-slate-200 transition-colors" data-id="${lst.id}" data-title="${escHtml(lst.title)}">
                 <span class="material-symbols-outlined text-[16px]">open_in_new</span>
                 Preview
               </button>
@@ -573,18 +553,18 @@ async function loadReviewQueue() {
     }).join('');
 
     // Bind Claim Handlers
-    document.querySelectorAll('.claim-btn').forEach(btn => {
+    container.querySelectorAll('.claim-btn').forEach(btn => {
       btn.onclick = async () => {
         const id = btn.getAttribute('data-id');
         const title = btn.getAttribute('data-title');
         
         try {
-          const { error } = await supabase
-            .from('listings')
-            .update({ assigned_employee_id: session.user.id })
-            .eq('id', id);
-
-          if (error) throw error;
+          await assignListingEmployee({
+            listingId: id,
+            assignedEmployeeId: session.user.id,
+            userRole: 'Employee',
+            currentUserId: session.user.id
+          }, supabase);
 
           showEmployeeToast(`✓ Claimed listing "${title}"`);
           loadReviewQueue();
@@ -596,8 +576,8 @@ async function loadReviewQueue() {
     });
 
     // Bind Status Transition Select Handlers
-    document.querySelectorAll('.status-transition-select').forEach(select => {
-      select.onchange = async () => {
+    container.querySelectorAll('.status-transition-select').forEach(select => {
+      select.onchange = () => {
         const id = select.getAttribute('data-id');
         const title = select.getAttribute('data-title');
         const oldStatus = select.getAttribute('data-current');
@@ -617,8 +597,8 @@ async function loadReviewQueue() {
           remarksInput.value = '';
           modalTitle.textContent = `Update to ${newStatus === 'Active' ? 'Approved' : newStatus}`;
           
-          if (newStatus === 'Rejected') {
-            modalDesc.innerHTML = `<span class="text-red-500 font-semibold">Remarks/Reason are MANDATORY when rejecting a listing.</span>`;
+          if (newStatus === 'Rejected' || newStatus === 'Suspended') {
+            modalDesc.innerHTML = `<span class="text-red-500 font-semibold">Remarks/Reason are MANDATORY when status is ${newStatus}.</span>`;
           } else {
             modalDesc.textContent = `Please provide optional remarks/reason for this status change.`;
           }
@@ -629,7 +609,7 @@ async function loadReviewQueue() {
       };
     });
 
-    document.querySelectorAll('.preview-btn').forEach(btn => {
+    container.querySelectorAll('.preview-btn').forEach(btn => {
       btn.onclick = () => {
         const id = btn.getAttribute('data-id');
         window.open(`/property-details.html?id=${id}&adminPreview=1`, '_blank');
@@ -637,6 +617,8 @@ async function loadReviewQueue() {
     });
   } catch (err) {
     console.error("Failed to load review queue:", err);
+    const container = document.getElementById('listings-review-queue-list');
+    if (container) container.innerHTML = `<div class="text-center py-8 text-error text-sm">Failed to load review queue.</div>`;
   }
 }
 

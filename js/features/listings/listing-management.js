@@ -164,8 +164,22 @@ export function generateListingsHTML(listings, showViews) {
             statusDisplay = 'Sold Out';
         } else if (l.status === 'Active') {
             badgeClass = 'bg-secondary-fixed text-on-secondary-fixed-variant';
+            statusDisplay = 'Approved';
         } else if (l.status === 'Pending') {
             badgeClass = 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300';
+            statusDisplay = 'Pending';
+        } else if (l.status === 'Under Review') {
+            badgeClass = 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300';
+            statusDisplay = 'Under Review';
+        } else if (l.status === 'Rejected') {
+            badgeClass = 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300';
+            statusDisplay = 'Rejected';
+        } else if (l.status === 'Suspended') {
+            badgeClass = 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300';
+            statusDisplay = 'Suspended';
+        } else if (l.status === 'Draft') {
+            badgeClass = 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
+            statusDisplay = 'Draft';
         } else if (l.status === 'Flagged') {
             badgeClass = 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
         }
@@ -352,9 +366,26 @@ export async function openListingModal(id) {
     const statusSelect = document.getElementById('modal-status');
     if (statusSelect) {
         statusSelect.innerHTML = '';
-        const allowedStatuses = userRole === 'Broker' 
-            ? ['Draft', 'Pending', 'Active', 'sold_out']
-            : ['Draft', 'Pending', 'Under Review', 'Active', 'Rejected', 'Suspended', 'sold_out'];
+        let allowedStatuses;
+        if (userRole === 'Broker') {
+            if (!listing || listing.status === 'Draft') {
+                allowedStatuses = ['Draft', 'Pending'];
+            } else if (listing.status === 'Rejected') {
+                allowedStatuses = ['Pending', 'Draft'];
+            } else if (listing.status === 'Active') {
+                allowedStatuses = ['Active', 'sold_out'];
+            } else if (isListingSoldOut(listing.status)) {
+                allowedStatuses = ['sold_out'];
+            } else if (listing.status === 'Under Review') {
+                allowedStatuses = ['Under Review'];
+            } else if (listing.status === 'Suspended') {
+                allowedStatuses = ['Suspended'];
+            } else {
+                allowedStatuses = ['Draft', 'Pending'];
+            }
+        } else {
+            allowedStatuses = ['Draft', 'Pending', 'Under Review', 'Active', 'Rejected', 'Suspended', 'sold_out'];
+        }
         
         const currentStatus = listing ? listing.status : (userRole === 'Broker' ? 'Draft' : 'Active');
         const finalStatuses = [...allowedStatuses];
@@ -516,8 +547,20 @@ export async function saveListingForm() {
 
     const available_from = document.getElementById('modal-available-from')?.value?.trim() || null;
 
+    const userRole = localStorage.getItem('role') || 'Broker';
+    let targetStatus = status;
+    if (userRole === 'Broker') {
+        if (!id && targetStatus === 'Active') {
+            targetStatus = 'Pending';
+        } else if (id && oldStatus === 'Rejected') {
+            targetStatus = 'Pending';
+        } else if (id && oldStatus !== 'Active' && targetStatus === 'Active') {
+            targetStatus = 'Pending';
+        }
+    }
+
     const listingData = { 
-        title, location, price, intent, type, status, beds, baths, sqft, views, lat, lng, img,
+        title, location, price, intent, type, status: targetStatus, beds, baths, sqft, views, lat, lng, img,
         brokerage, brokerage_type, deposit, available_from,
         broker_id: user ? user.id : null
     };

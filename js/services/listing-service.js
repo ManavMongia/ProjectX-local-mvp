@@ -476,9 +476,12 @@ export function isListingSoldOut(listingOrStatus) {
 export function formatListingStatus(status) {
     if (!status) return 'Draft';
     if (isListingSoldOut(status)) return 'Sold Out';
-    const s = status.toLowerCase();
+    const s = String(status).trim().toLowerCase();
     if (s === 'active') return 'Active';
     if (s === 'pending') return 'Pending';
+    if (s === 'under review' || s === 'under_review') return 'Under Review';
+    if (s === 'rejected') return 'Rejected';
+    if (s === 'suspended') return 'Suspended';
     if (s === 'flagged') return 'Flagged';
     if (s === 'draft') return 'Draft';
     return status;
