@@ -5,6 +5,7 @@
  */
 
 import { signIn, getUserProfile, createUserProfile, signOut, resetPassword } from '../../services/auth-service.js';
+import { signInWithPhone, validatePhoneNumber, validatePassword, formatPhoneDisplay } from '../../services/phone-auth-service.js';
 import { resolveCurrentPage, isAuthOrLoginPage } from '../../core/app-state.js';
 import { getReferredBy, setReferredBy } from '../../core/auth-state.js';
 import { login } from './auth-guard.js';
@@ -72,6 +73,11 @@ export function initLoginPage() {
     const roleDescText = document.getElementById('role-description-text');
     const roleDescBox = document.getElementById('role-description-box');
 
+    const authMethodSelector = document.getElementById('auth-method-selector');
+    const methodBtnPhone = document.getElementById('method-btn-phone');
+    const methodBtnEmail = document.getElementById('method-btn-email');
+    const countryCodeSelect = document.getElementById('country-code-select');
+
     const nameField = document.getElementById('name-field');
     const nameLabel = document.getElementById('name-label');
     const nameInput = document.getElementById('input-name');
@@ -107,8 +113,37 @@ export function initLoginPage() {
         ? 'signup' 
         : (urlParams.get('mode') === 'forgot' ? 'forgot' : 'signin');
 
+    let currentAuthMethod = authMethodSelector ? 'phone' : 'email';
+
     let selectedRole = currentPage === 'staff-login.html' ? 'Admin' : 'Buyer';
     let referrerInfo = null;
+
+    function setAuthMethod(method) {
+        currentAuthMethod = method;
+        if (methodBtnPhone && methodBtnEmail) {
+            if (method === 'phone') {
+                methodBtnPhone.className = 'auth-method-tab flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 bg-white text-slate-900 shadow-sm cursor-pointer';
+                methodBtnEmail.className = 'auth-method-tab flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-900 cursor-pointer';
+            } else {
+                methodBtnEmail.className = 'auth-method-tab flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 bg-white text-slate-900 shadow-sm cursor-pointer';
+                methodBtnPhone.className = 'auth-method-tab flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-900 cursor-pointer';
+            }
+        }
+        updateUI();
+    }
+
+    if (methodBtnPhone) {
+        methodBtnPhone.onclick = (e) => {
+            e.preventDefault();
+            setAuthMethod('phone');
+        };
+    }
+    if (methodBtnEmail) {
+        methodBtnEmail.onclick = (e) => {
+            e.preventDefault();
+            setAuthMethod('email');
+        };
+    }
 
     function showAlert(message, type = 'error') {
         if (!alertBox) return;
@@ -176,18 +211,26 @@ export function initLoginPage() {
         }
 
         // 3. Field Visibilities
+        if (authMethodSelector) {
+            authMethodSelector.style.display = currentMode === 'forgot' ? 'none' : 'flex';
+        }
+
         if (nameField) {
             nameField.style.display = currentMode === 'signup' ? 'block' : 'none';
             if (nameLabel) nameLabel.textContent = meta.nameLabel;
             if (nameInput) nameInput.placeholder = meta.namePlaceholder;
         }
 
-        if (phoneField) {
-            phoneField.style.display = currentMode === 'signup' ? 'block' : 'none';
-        }
-
-        if (emailField) {
-            emailField.style.display = 'block';
+        if (currentMode === 'forgot') {
+            if (phoneField) phoneField.style.display = 'none';
+            if (emailField) emailField.style.display = 'block';
+        } else {
+            if (phoneField) {
+                phoneField.style.display = currentAuthMethod === 'phone' ? 'block' : 'none';
+            }
+            if (emailField) {
+                emailField.style.display = currentAuthMethod === 'email' ? 'block' : 'none';
+            }
         }
 
         if (passwordField) {
@@ -372,10 +415,11 @@ export function initLoginPage() {
             clearAlert();
 
             const email = emailInput?.value?.trim() || '';
+            const phone = phoneInput?.value?.trim() || '';
+            const countryCode = countryCodeSelect?.value || '+91';
             const password = passwordInput?.value || '';
             const confirmPassword = confirmPasswordInput?.value || '';
             const name = nameInput?.value?.trim() || '';
-            const phone = phoneInput?.value?.trim() || '';
 
             // 1. Validation for Forgot Password
             if (currentMode === 'forgot') {
@@ -409,27 +453,33 @@ export function initLoginPage() {
             }
 
             // 2. Validation for Sign In and Sign Up
-            if (!email) {
-                showAlert('Please enter your email address.');
-                emailInput?.focus();
-                return;
+            let validatedPhone = null;
+            if (currentAuthMethod === 'phone') {
+                const phoneCheck = validatePhoneNumber(phone, countryCode);
+                if (!phoneCheck.valid) {
+                    showAlert(phoneCheck.error);
+                    phoneInput?.focus();
+                    return;
+                }
+                validatedPhone = phoneCheck.normalized;
+            } else {
+                if (!email) {
+                    showAlert('Please enter your email address.');
+                    emailInput?.focus();
+                    return;
+                }
+
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    showAlert('Please enter a valid email address.');
+                    emailInput?.focus();
+                    return;
+                }
             }
 
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                showAlert('Please enter a valid email address.');
-                emailInput?.focus();
-                return;
-            }
-
-            if (!password) {
-                showAlert('Please enter your password.');
-                passwordInput?.focus();
-                return;
-            }
-
-            if (password.length < 6) {
-                showAlert('Password must be at least 6 characters long.');
+            const passCheck = validatePassword(password);
+            if (!passCheck.valid) {
+                showAlert(passCheck.error);
                 passwordInput?.focus();
                 return;
             }
@@ -466,26 +516,36 @@ export function initLoginPage() {
                         password,
                         name,
                         phone,
+                        countryCode,
                         selectedRole,
-                        referrerId: refParam
+                        referrerId: refParam,
+                        authMethod: currentAuthMethod
                     });
 
                     if (signedIn) return;
                     
-                    // If email verification is needed:
                     currentMode = 'signin';
                     updateUI();
-                    showAlert('Account created! Please check your email to confirm your account or sign in.', 'success');
+                    showAlert('Account created! Please sign in with your credentials.', 'success');
                 } else {
-                    const data = await signIn(email, password);
+                    let data;
+                    if (currentAuthMethod === 'phone') {
+                        data = await signInWithPhone(phone, password, countryCode);
+                    } else {
+                        data = await signIn(email, password);
+                    }
 
                     // Fetch user profile from Supabase
                     let profile = await getUserProfile(data.user.id);
                     if (!profile) {
+                        const defaultName = currentAuthMethod === 'phone'
+                            ? formatPhoneDisplay(validatedPhone)
+                            : email.split('@')[0];
                         profile = await createUserProfile({
                             id: data.user.id,
-                            full_name: email.split('@')[0],
-                            role: selectedRole
+                            full_name: defaultName,
+                            role: selectedRole,
+                            phone: currentAuthMethod === 'phone' ? validatedPhone : undefined
                         });
                     }
 
@@ -511,9 +571,13 @@ export function initLoginPage() {
 
                 // Translate cryptic error codes into friendly user feedback
                 if (err.status === 400 || msg.toLowerCase().includes('invalid login credentials')) {
-                    msg = 'Email or password is incorrect. Please verify your details.';
+                    msg = currentAuthMethod === 'phone'
+                        ? 'Phone number or password is incorrect. Please verify your details.'
+                        : 'Email or password is incorrect. Please verify your details.';
                 } else if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('user already exists')) {
-                    msg = 'An account with this email already exists. Please sign in instead.';
+                    msg = currentAuthMethod === 'phone'
+                        ? 'An account with this phone number already exists. Please sign in instead.'
+                        : 'An account with this email already exists. Please sign in instead.';
                     currentMode = 'signin';
                     updateUI();
                 }

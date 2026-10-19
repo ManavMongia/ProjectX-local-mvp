@@ -167,6 +167,20 @@
 
         <!-- Form Elements -->
         <form class="space-y-4" onsubmit="return false;">
+          <!-- Auth Method Switcher (Phone vs Email) -->
+          <div id="auth-method-selector" class="flex p-1 bg-slate-100 rounded-xl gap-1">
+            <button type="button" id="method-btn-phone" data-method="phone"
+              class="auth-method-tab flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 bg-white text-slate-900 shadow-sm cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">smartphone</span>
+              <span>Phone</span>
+            </button>
+            <button type="button" id="method-btn-email" data-method="email"
+              class="auth-method-tab flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 text-slate-500 hover:text-slate-900 cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">mail</span>
+              <span>Email</span>
+            </button>
+          </div>
+
           <!-- Full Name -->
           <div id="name-field" class="space-y-1.5">
             <label id="name-label" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -179,16 +193,32 @@
             </div>
           </div>
 
-          <!-- Phone Number (Optional) -->
+          <!-- Phone Number Field -->
           <div id="phone-field" class="space-y-1.5">
             <div class="flex items-center justify-between">
-              <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Phone Number</label>
-              <span class="text-[10px] text-slate-400 font-medium">Optional</span>
+              <label id="phone-label" class="block text-[11px] font-bold uppercase tracking-wider text-slate-500">Mobile Number</label>
+              <span class="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">Password Login (No SMS)</span>
             </div>
-            <div class="relative">
-              <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-slate-400">call</span>
-              <input type="tel" id="input-phone" placeholder="+91 98765 43210"
-                class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-slate-900 focus:bg-white transition-all text-sm font-medium text-slate-900 placeholder-slate-400" />
+            <div class="flex gap-2">
+              <div class="relative w-[115px] shrink-0">
+                <select id="country-code-select" aria-label="Select Country Code"
+                  class="w-full h-full py-3 pl-3 pr-7 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-slate-900 focus:bg-white text-xs font-bold text-slate-800 appearance-none cursor-pointer">
+                  <option value="+91" selected>🇮🇳 +91</option>
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+44">🇬🇧 +44</option>
+                  <option value="+971">🇦🇪 +971</option>
+                  <option value="+65">🇸🇬 +65</option>
+                  <option value="+61">🇦🇺 +61</option>
+                  <option value="+49">🇩🇪 +49</option>
+                </select>
+                <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</span>
+              </div>
+              <div class="relative flex-1">
+                <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-slate-400">call</span>
+                <input type="tel" id="input-phone" placeholder="98765 43210"
+                  class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-slate-900 focus:bg-white transition-all text-sm font-medium text-slate-900 placeholder-slate-400"
+                  autocomplete="tel" />
+              </div>
             </div>
           </div>
 

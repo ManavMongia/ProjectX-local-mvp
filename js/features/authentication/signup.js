@@ -4,6 +4,7 @@
  */
 
 import { signUp, createUserProfile } from '../../services/auth-service.js';
+import { signUpWithPhone, normalizePhoneNumber } from '../../services/phone-auth-service.js';
 import { getUserProfile } from '../../services/user-service.js';
 import { getReferredBy, setReferredBy } from '../../core/auth-state.js';
 import { login } from './auth-guard.js';
@@ -55,17 +56,33 @@ export function updateReferralBanner(isSignUp, referrerInfo) {
     }
 }
 
-export async function processSignUp({ email, password, name, phone, selectedRole, referrerId }) {
-    const data = await signUp(email, password);
+export async function processSignUp({ email, password, name, phone, countryCode = '+91', selectedRole, referrerId, authMethod = 'email' }) {
+    let data;
+    let registeredPhone = null;
 
-    if (data.user) {
+    if (authMethod === 'phone') {
+        registeredPhone = normalizePhoneNumber(phone, countryCode);
+        data = await signUpWithPhone(phone, password, {
+            name,
+            role: selectedRole,
+            countryCode,
+            referrerId
+        });
+    } else {
+        data = await signUp(email, password);
+        if (phone) {
+            registeredPhone = normalizePhoneNumber(phone, countryCode);
+        }
+    }
+
+    if (data && data.user) {
         const profileData = {
             id: data.user.id,
             full_name: name,
             role: selectedRole
         };
-        if (phone) {
-            profileData.phone = phone;
+        if (registeredPhone) {
+            profileData.phone = registeredPhone;
         }
         const referredBy = referrerId || getReferredBy();
         if (referredBy) {
@@ -80,7 +97,7 @@ export async function processSignUp({ email, password, name, phone, selectedRole
 
     showToast('Account created successfully!');
     
-    if (data.session) {
+    if (data && data.session) {
         login(selectedRole, name);
         return true;
     }

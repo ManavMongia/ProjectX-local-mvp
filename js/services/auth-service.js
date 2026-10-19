@@ -6,6 +6,16 @@
 
 import { supabase } from '../core/supabase-client.js';
 
+export {
+    signInWithPhone,
+    signUpWithPhone,
+    normalizePhoneNumber,
+    validatePhoneNumber,
+    validatePassword,
+    formatPhoneDisplay,
+    SUPPORTED_COUNTRY_CODES
+} from './phone-auth-service.js';
+
 export async function getCurrentSession() {
     const { data: { session }, error } = await supabase.auth.getSession();
     if (error) {
