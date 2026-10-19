@@ -26,6 +26,10 @@ import {
     renderDealsList
 } from '../user/ratings.js';
 import { getUserRatingSummary } from '../../services/rating-service.js';
+import {
+    initBrokerAnalyticsManager,
+    renderBrokerAnalytics
+} from './broker-analytics.js';
 
 let globalBrokerChatUnsubscribe = null;
 
@@ -79,6 +83,9 @@ export function activateBrokerTab(hash) {
         if (targetId === 'tab-messages') {
             targetEl.classList.add('flex');
             initBrokerChat();
+        } else if (targetId === 'tab-analytics') {
+            targetEl.classList.add('block');
+            renderBrokerAnalytics();
         } else {
             targetEl.classList.add('block');
         }
@@ -316,6 +323,7 @@ export async function initBrokerDashboardPage() {
     // Initialize Deals & Ratings Manager
     if (session && session.user) {
         await initBrokerDealsAndRatingsManager(session.user.id);
+        await initBrokerAnalyticsManager(session.user.id);
     }
 
     // Global Real-time Message Listener for Broker Dashboard

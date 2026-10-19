@@ -74,6 +74,10 @@
     <span class="material-symbols-outlined text-[20px]">handshake</span>
     <span class="hidden lg:inline">My Deals</span>
 </a>
+<a id="nav-analytics" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-100 rounded-lg hover:text-slate-900 transition-colors justify-center lg:justify-start" href="#analytics-section">
+    <span class="material-symbols-outlined text-[20px]">analytics</span>
+    <span class="hidden lg:inline">Analytics</span>
+</a>
 <a id="nav-messages" class="flex items-center justify-center lg:justify-between px-3 py-2.5 text-slate-500 hover:bg-slate-100 rounded-lg hover:text-slate-900 transition-colors w-full" href="#messages-section">
     <div class="flex items-center gap-3">
         <span class="material-symbols-outlined text-[20px]">forum</span>
@@ -132,6 +136,10 @@
   <button type="button" data-tab="#deals-section" aria-label="Deals" aria-selected="false" class="mobile-nav-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-slate-400 transition-colors">
     <span class="material-symbols-outlined text-[22px]">handshake</span>
     <span class="text-[9px] font-black uppercase tracking-widest">Deals</span>
+  </button>
+  <button type="button" data-tab="#analytics-section" aria-label="Analytics" aria-selected="false" class="mobile-nav-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-slate-400 transition-colors">
+    <span class="material-symbols-outlined text-[22px]">analytics</span>
+    <span class="text-[9px] font-black uppercase tracking-widest">Analytics</span>
   </button>
   <button type="button" data-tab="#messages-section" aria-label="Messages" aria-selected="false" class="mobile-nav-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-xl text-slate-400 transition-colors relative">
     <span class="material-symbols-outlined text-[22px]">forum</span>
@@ -448,39 +456,57 @@
         </section>
     </div>
 
-    <!-- TAB: ANALYTICS
+    <!-- TAB: ANALYTICS -->
     <div id="tab-analytics" class="tab-content hidden">
-        <header class="flex justify-between items-center mb-stack-lg gap-4">
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-stack-lg gap-4">
             <div>
                 <h1 class="font-h2 text-h2 text-primary">Analytics</h1>
                 <p class="font-body-sm text-body-sm text-on-surface-variant mt-unit">Track performance trends for listings and buyer interest.</p>
             </div>
+            <div class="flex items-center gap-3">
+                <button id="analytics-date-filter-btn" class="flex items-center gap-2 px-4 py-2 bg-surface-container-lowest border border-outline-variant rounded-lg shadow-sm text-body-sm font-body-sm text-on-surface hover:bg-slate-100 transition-colors" title="Click to change date range">
+                    <span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                    <span id="analytics-date-filter-text">All Time</span>
+                    <span class="material-symbols-outlined text-[18px]">arrow_drop_down</span>
+                </button>
+            </div>
         </header>
+
+        <!-- Query Error Box -->
+        <div id="analytics-error-state" class="hidden mb-stack-lg p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between text-red-800">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-red-600">error</span>
+                <span id="analytics-error-message" class="text-sm font-medium">Failed to load analytics data.</span>
+            </div>
+            <button id="retry-analytics-btn" class="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 transition-colors">
+                Retry
+            </button>
+        </div>
+
         <section class="grid grid-cols-1 md:grid-cols-3 gap-gutter mb-stack-lg">
             <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 shadow-sm">
                 <p class="font-label-caps text-label-caps text-on-surface-variant mb-1">AVG DAYS TO INQUIRY</p>
-                <h3 class="font-h3 text-h3 text-primary">2.8</h3>
-                <p class="font-body-sm text-body-sm text-on-surface-variant mt-2">Faster first-response opportunity window.</p>
+                <h3 id="stat-avg-days-to-inquiry" class="font-h3 text-h3 text-primary">...</h3>
+                <p id="stat-avg-days-desc" class="font-body-sm text-body-sm text-on-surface-variant mt-2">Days from listing creation to buyer inquiry.</p>
             </div>
             <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 shadow-sm">
                 <p class="font-label-caps text-label-caps text-on-surface-variant mb-1">INQUIRY TO VIEWING</p>
-                <h3 class="font-h3 text-h3 text-primary">31%</h3>
-                <p class="font-body-sm text-body-sm text-on-surface-variant mt-2">Conversion from incoming leads to site visits.</p>
+                <h3 id="stat-inquiry-to-viewing" class="font-h3 text-h3 text-primary">...</h3>
+                <p id="stat-inquiry-to-viewing-desc" class="font-body-sm text-body-sm text-on-surface-variant mt-2">Conversion from incoming leads to site visits.</p>
             </div>
             <div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 shadow-sm">
                 <p class="font-label-caps text-label-caps text-on-surface-variant mb-1">TOP AREA</p>
-                <h3 class="font-h3 text-h3 text-primary">Bandra West</h3>
-                <p class="font-body-sm text-body-sm text-on-surface-variant mt-2">Highest engagement in the current period.</p>
+                <h3 id="stat-top-area" class="font-h3 text-h3 text-primary">...</h3>
+                <p id="stat-top-area-desc" class="font-body-sm text-body-sm text-on-surface-variant mt-2">Highest engagement in the current period.</p>
             </div>
         </section>
         <section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-5 shadow-sm">
             <h3 class="font-h3 text-h3 text-primary mb-2">Performance Summary</h3>
-            <p class="font-body-sm text-body-sm text-on-surface-variant">
-                Your active inventory is receiving steady visibility. Focus follow-up on high-intent inquiries in premium neighborhoods for better close rates.
+            <p id="stat-performance-summary" class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                Loading performance analytics...
             </p>
         </section>
     </div>
-    -->
     <!-- TAB: NOTIFICATIONS -->
     <div id="tab-notifications" class="tab-content hidden">
         <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-stack-lg gap-4">
