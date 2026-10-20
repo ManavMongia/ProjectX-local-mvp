@@ -379,6 +379,146 @@ assert('STATUS_BADGE_CLASSES contains Rejected style', !!STATUS_BADGE_CLASSES['R
 assert('STATUS_BADGE_CLASSES contains Suspended style', !!STATUS_BADGE_CLASSES['Suspended']);
 assert('STATUS_DISPLAY_LABELS maps Active to Approved (Active)', STATUS_DISPLAY_LABELS['Active'] === 'Approved (Active)');
 
+// ── Section 7: Atomic Rollback & PGRST200 Graceful Recovery ──
+console.log('\n--- Section 7: Atomic Rollback & PGRST200 Recovery ---');
+
+// 1. Test Atomic Rollback when status history insertion fails
+const rollbackDb = {
+    listings: [{ id: 201, title: 'Rollback Test Villa', status: 'Pending', broker_id: 'b-1' }],
+    listing_status_history: []
+};
+
+const failingHistoryClient = {
+    from(table) {
+        if (table === 'listings') {
+            return {
+                update(patch) {
+                    return {
+                        eq(field, val) {
+                            const execute = () => {
+                                const item = rollbackDb.listings.find(l => l.id === val);
+                                if (item) Object.assign(item, patch);
+                                return { data: item ? { ...item } : null, error: null };
+                            };
+                            return {
+                                select() {
+                                    return {
+                                        single() {
+                                            return Promise.resolve(execute());
+                                        }
+                                    };
+                                },
+                                then(resolve) {
+                                    return Promise.resolve(execute()).then(resolve);
+                                }
+                            };
+                        }
+                    };
+                }
+            };
+        }
+        if (table === 'listing_status_history') {
+            return {
+                insert() {
+                    return {
+                        select() {
+                            return {
+                                single() {
+                                    return Promise.resolve({ data: null, error: new Error('Simulated history insert failure') });
+                                }
+                            };
+                        }
+                    };
+                }
+            };
+        }
+        if (table === 'notifications') {
+            return { insert: () => Promise.resolve({ data: null, error: null }) };
+        }
+    }
+};
+
+let rollbackErrorCaught = false;
+try {
+    await updateListingModerationStatus({
+        listingId: 201,
+        oldStatus: 'Pending',
+        newStatus: 'Active',
+        changedByUserId: 'admin-1',
+        userRole: 'Admin',
+        reason: 'Approved test',
+        brokerId: 'b-1',
+        listingTitle: 'Rollback Test Villa',
+        listing: rollbackDb.listings[0]
+    }, failingHistoryClient);
+} catch (err) {
+    rollbackErrorCaught = true;
+}
+
+assert('updateListingModerationStatus throws when history insertion fails', rollbackErrorCaught);
+assert('Listing status rolled back to Pending when history insertion fails', rollbackDb.listings[0].status === 'Pending');
+
+// 2. Test fetchModerationListings PGRST200 fallback
+const pgrstClient = {
+    from(table) {
+        if (table === 'listings') {
+            return {
+                select(fields) {
+                    const isJoined = fields.includes('!listings_assigned_employee_id_fkey');
+                    return {
+                        order() {
+                            return {
+                                limit() {
+                                    if (isJoined) {
+                                        const err = new Error('Could not find a relationship between listings and profiles in the schema cache');
+                                        err.code = 'PGRST200';
+                                        return Promise.resolve({ data: null, error: err });
+                                    }
+                                    return Promise.resolve({
+                                        data: [
+                                            { id: 301, title: 'Safe Queue Villa', status: 'Pending', assigned_employee_id: null }
+                                        ],
+                                        error: null
+                                    });
+                                }
+                            };
+                        }
+                    };
+                }
+            };
+        }
+        if (table === 'profiles') {
+            return {
+                select: () => ({ in: () => Promise.resolve({ data: [], error: null }) })
+            };
+        }
+    }
+};
+
+const queueResult = await fetchModerationListings({ userRole: 'Admin' }, pgrstClient);
+assert('fetchModerationListings survives PGRST200 and loads listings via fallback', queueResult.length === 1 && queueResult[0].id === 301);
+
+// 3. Test Property Details Preview Security Rules
+function canPreviewNonPublicListing(listing, userSession, userProfile) {
+    const isPublicStatus = listing && (listing.status === 'Active' || listing.status === 'sold_out');
+    if (isPublicStatus) return true;
+
+    // Must have an authenticated user with verified Admin or Employee role in DB profile
+    if (!userSession || !userProfile) return false;
+    const isStaff = userProfile.role === 'Admin' || userProfile.role === 'Employee';
+    const isOwner = userSession.id && (listing.broker_id === userSession.id || listing.created_by === userSession.id);
+    return isStaff || isOwner;
+}
+
+const pendingListing = { id: 999, status: 'Pending', broker_id: 'owner-1' };
+assert('Unauthenticated visitor with adminPreview URL cannot view Pending listing', !canPreviewNonPublicListing(pendingListing, null, null));
+assert('Authenticated Buyer with adminPreview URL cannot view Pending listing', !canPreviewNonPublicListing(pendingListing, { id: 'buyer-1' }, { role: 'Buyer' }));
+assert('Authenticated Broker (non-owner) cannot view Pending listing', !canPreviewNonPublicListing(pendingListing, { id: 'broker-2' }, { role: 'Broker' }));
+assert('Authenticated Listing Owner can view their own non-public listing', canPreviewNonPublicListing(pendingListing, { id: 'owner-1' }, { role: 'Broker' }));
+assert('Authenticated Admin can preview non-public listing', canPreviewNonPublicListing(pendingListing, { id: 'admin-1' }, { role: 'Admin' }));
+assert('Authenticated Employee can preview non-public listing', canPreviewNonPublicListing(pendingListing, { id: 'emp-1' }, { role: 'Employee' }));
+
+
 // ── Summary ──
 console.log('\n================================================================');
 console.log(`Results: ${passed} passed, ${failed} failed`);

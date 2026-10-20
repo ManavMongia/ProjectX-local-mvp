@@ -92,7 +92,7 @@ CREATE OR REPLACE FUNCTION public.fn_moderate_listing_status(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_caller_id UUID;
@@ -220,3 +220,8 @@ BEGIN
     );
 END;
 $$;
+
+-- Restrict execution to authenticated users
+REVOKE ALL ON FUNCTION public.fn_moderate_listing_status(BIGINT, TEXT, TEXT, UUID) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fn_moderate_listing_status(BIGINT, TEXT, TEXT, UUID) TO authenticated;
+

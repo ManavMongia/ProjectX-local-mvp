@@ -284,7 +284,18 @@ function bindLeadStatusSelects(container, user) {
                 console.error('Failed to update lead status:', err);
                 // Rollback select to previous value
                 select.value = oldStatus;
-                showToast(`Failed to update status: ${err.message}`, true);
+
+                let friendlyMsg = 'Failed to update lead status. Please try again.';
+                if (err.message && (err.message.includes('migration') || err.message.includes('Database schema') || err.message.includes('audit table'))) {
+                    friendlyMsg = 'Database update pending. Please run the lead status migration.';
+                } else if (err.message && err.message.includes('Unauthorized')) {
+                    friendlyMsg = 'Unauthorized: You can only update leads for your own listings.';
+                } else if (err.message && err.message.includes('Invalid lead status')) {
+                    friendlyMsg = err.message;
+                } else if (err.message && !err.message.includes('PGRST') && !err.message.includes('violates') && !err.message.includes('syntax')) {
+                    friendlyMsg = err.message;
+                }
+                showToast(friendlyMsg, true);
             } finally {
                 updatingLeads.delete(inquiryId);
                 select.disabled = false;
@@ -386,7 +397,17 @@ export async function openInquiry(id) {
                     }
                 } catch (err) {
                     modalSelect.value = status;
-                    showToast(err.message, true);
+                    let friendlyMsg = 'Failed to update lead status. Please try again.';
+                    if (err.message && (err.message.includes('migration') || err.message.includes('Database schema') || err.message.includes('audit table'))) {
+                        friendlyMsg = 'Database update pending. Please run the lead status migration.';
+                    } else if (err.message && err.message.includes('Unauthorized')) {
+                        friendlyMsg = 'Unauthorized: You can only update leads for your own listings.';
+                    } else if (err.message && err.message.includes('Invalid lead status')) {
+                        friendlyMsg = err.message;
+                    } else if (err.message && !err.message.includes('PGRST') && !err.message.includes('violates') && !err.message.includes('syntax')) {
+                        friendlyMsg = err.message;
+                    }
+                    showToast(friendlyMsg, true);
                 } finally {
                     modalSelect.disabled = false;
                 }

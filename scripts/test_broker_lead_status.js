@@ -474,6 +474,91 @@ async function testErrorHandling() {
     }
 
     assert('Service throws when database update fails, allowing UI to revert dropdown and alert broker', failedAsExpected);
+
+    // Test Audit History Failure Rollback: inquiry must be rolled back to oldStatus
+    const testInquiry = { id: 501, broker_id: 'b2', lead_status: 'New Lead' };
+    let historyRollbackSucceeded = false;
+    let rollbackRevertedToOld = false;
+
+    const rollbackMockDb = {
+        rpc: () => Promise.resolve({ data: null, error: { message: 'function not found' } }),
+        from(table) {
+            if (table === 'inquiries') {
+                return {
+                    select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { ...testInquiry }, error: null }) }) }),
+                    update: (patch) => ({
+                        eq: (field, val) => ({
+                            select: () => ({
+                                single: () => {
+                                    Object.assign(testInquiry, patch);
+                                    return Promise.resolve({ data: { ...testInquiry }, error: null });
+                                }
+                            }),
+                            then(resolve) {
+                                Object.assign(testInquiry, patch);
+                                return Promise.resolve({ data: null, error: null }).then(resolve);
+                            }
+                        })
+                    })
+                };
+            }
+            if (table === 'lead_status_history') {
+                return {
+                    insert: () => Promise.resolve({ data: null, error: new Error('Simulated history audit failure') })
+                };
+            }
+            if (table === 'notifications') {
+                return { insert: () => Promise.resolve({ data: null, error: null }) };
+            }
+        }
+    };
+
+    try {
+        await updateLeadStatus({
+            inquiryId: 501,
+            newStatus: 'Site Visit Requested',
+            currentUserId: 'b2',
+            userRole: 'Broker'
+        }, rollbackMockDb);
+    } catch (err) {
+        historyRollbackSucceeded = err.message.includes('audit history') || err.message.includes('rolled back');
+        rollbackRevertedToOld = testInquiry.lead_status === 'New Lead';
+    }
+
+    assert('Failed audit history insertion rolls back inquiry lead status', historyRollbackSucceeded && rollbackRevertedToOld);
+
+    // Test Missing Schema Column Error
+    let schemaErrorCaught = false;
+    const missingSchemaMock = {
+        rpc: () => Promise.resolve({ data: null, error: { message: 'function not found' } }),
+        from(table) {
+            if (table === 'inquiries') {
+                return {
+                    select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { id: 601, broker_id: 'b2', lead_status: 'New Lead' }, error: null }) }) }),
+                    update: () => ({
+                        eq: () => ({
+                            select: () => ({
+                                single: () => Promise.resolve({ data: null, error: { code: '42703', message: 'column "lead_status" does not exist' } })
+                            })
+                        })
+                    })
+                };
+            }
+        }
+    };
+
+    try {
+        await updateLeadStatus({
+            inquiryId: 601,
+            newStatus: 'Follow-up',
+            currentUserId: 'b2',
+            userRole: 'Broker'
+        }, missingSchemaMock);
+    } catch (err) {
+        schemaErrorCaught = err.message.includes('20261020000001_broker_lead_status_management.sql');
+    }
+
+    assert('Missing lead_status schema surfaces actionable migration error', schemaErrorCaught);
 }
 await testErrorHandling();
 

@@ -205,22 +205,42 @@ export async function updateLeadStatus(
     const oldStatus = normalizeLeadStatus(currentInquiry.lead_status);
 
     // 2. Try atomic database function if available
-    try {
-        const { data: rpcResult, error: rpcError } = await supabaseClient.rpc('fn_update_lead_status', {
-            p_inquiry_id: inquiryId,
-            p_new_status: newStatus
-        });
+    if (typeof supabaseClient.rpc === 'function') {
+        try {
+            const { data: rpcResult, error: rpcError } = await supabaseClient.rpc('fn_update_lead_status', {
+                p_inquiry_id: inquiryId,
+                p_new_status: newStatus
+            });
 
-        if (!rpcError && rpcResult && rpcResult.success) {
-            return {
-                success: true,
-                inquiry: { ...currentInquiry, lead_status: newStatus },
-                oldStatus,
-                newStatus
-            };
+            if (!rpcError && rpcResult && rpcResult.success) {
+                return {
+                    success: true,
+                    inquiry: { ...currentInquiry, lead_status: newStatus },
+                    oldStatus,
+                    newStatus
+                };
+            }
+            if (rpcError) {
+                const msg = String(rpcError.message || '').toLowerCase();
+                const isMissingFunction = rpcError.code === 'PGRST202' ||
+                                          rpcError.code === '42883' ||
+                                          (msg.includes('function') && msg.includes('not found')) ||
+                                          msg.includes('could not find');
+                if (!isMissingFunction) {
+                    console.error('fn_update_lead_status failed:', rpcError);
+                    throw new Error(rpcError.message || 'Failed to update lead status');
+                }
+            }
+        } catch (err) {
+            const msg = String(err.message || '').toLowerCase();
+            const isMissingFunction = err.code === 'PGRST202' ||
+                                      err.code === '42883' ||
+                                      (msg.includes('function') && msg.includes('not found')) ||
+                                      msg.includes('could not find');
+            if (!isMissingFunction) {
+                throw err;
+            }
         }
-    } catch {
-        // Fallback to direct client update if function is not yet present on remote DB
     }
 
     // 3. Direct table update fallback
@@ -232,22 +252,40 @@ export async function updateLeadStatus(
         .single();
 
     if (updateError) {
+        if (updateError.code === '42703' || (updateError.message && updateError.message.includes('lead_status'))) {
+            throw new Error('Database schema for lead status management is not applied. Migration 20261020000001_broker_lead_status_management.sql must be applied.');
+        }
         console.error('Failed to update lead status:', updateError);
         throw updateError;
     }
 
-    // 4. Record audit log in lead_status_history if table exists
-    try {
-        await supabaseClient
-            .from('lead_status_history')
-            .insert([{
-                inquiry_id: inquiryId,
-                old_status: oldStatus,
-                new_status: newStatus,
-                changed_by: currentUserId || null
-            }]);
-    } catch {
-        // Non-destructive fallback for audit log
+    // 4. Record audit log in lead_status_history (MUST NOT be silently ignored)
+    const { error: historyError } = await supabaseClient
+        .from('lead_status_history')
+        .insert([{
+            inquiry_id: inquiryId,
+            old_status: oldStatus,
+            new_status: newStatus,
+            changed_by: currentUserId || null
+        }]);
+
+    if (historyError) {
+        console.error('Failed to record lead status history, rolling back status update:', historyError);
+        // Rollback inquiry lead_status to oldStatus
+        try {
+            await supabaseClient
+                .from('inquiries')
+                .update({ lead_status: oldStatus })
+                .eq('id', inquiryId);
+        } catch (rbErr) {
+            console.error('Rollback failed:', rbErr);
+        }
+
+        if (historyError.code === '42P01' || historyError.code === 'PGRST205' || (historyError.message && historyError.message.includes('lead_status_history'))) {
+            throw new Error('Database audit table "lead_status_history" is missing. Migration 20261020000001_broker_lead_status_management.sql must be applied.');
+        }
+
+        throw new Error(`Failed to record audit history: ${historyError.message}. Status change was rolled back.`);
     }
 
     // 5. Send broker notification if applicable
@@ -261,8 +299,8 @@ export async function updateLeadStatus(
                     message: `Lead status for "${currentInquiry.name || 'Customer'}" updated to ${newStatus}.`,
                     read: false
                 }]);
-        } catch {
-            // Non-destructive
+        } catch (notifErr) {
+            console.warn('Could not dispatch broker notification for lead update:', notifErr.message);
         }
     }
 

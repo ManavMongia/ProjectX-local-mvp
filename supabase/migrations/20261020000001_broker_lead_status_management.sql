@@ -93,6 +93,7 @@ CREATE OR REPLACE FUNCTION public.fn_update_lead_status(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_inquiry public.inquiries%ROWTYPE;
@@ -162,3 +163,8 @@ BEGIN
     RETURN v_result;
 END;
 $$;
+
+-- Restrict execution to authenticated users
+REVOKE ALL ON FUNCTION public.fn_update_lead_status(BIGINT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.fn_update_lead_status(BIGINT, TEXT) TO authenticated;
+

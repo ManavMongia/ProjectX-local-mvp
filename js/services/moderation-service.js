@@ -279,7 +279,50 @@ export async function updateListingModerationStatus({
         throw new Error(validation.error);
     }
 
-    // 2. Prepare listing update payload
+    // 2. Try atomic database RPC function first
+    if (typeof supabaseClient.rpc === 'function') {
+        try {
+            const { data: rpcData, error: rpcError } = await supabaseClient.rpc('fn_moderate_listing_status', {
+                p_listing_id: listingId,
+                p_new_status: newStatus,
+                p_reason: reason ? reason.trim() : null,
+                p_assigned_employee_id: assignedEmployeeId !== undefined ? assignedEmployeeId : null
+            });
+
+            if (!rpcError && rpcData && rpcData.success) {
+                return {
+                    success: true,
+                    listing: { id: listingId, status: newStatus },
+                    history: { id: rpcData.history_id, listing_id: listingId, new_status: newStatus }
+                };
+            }
+
+            // If error is an authorization or validation error from RPC, throw immediately
+            if (rpcError) {
+                const msg = String(rpcError.message || '').toLowerCase();
+                const isMissingFn = rpcError.code === 'PGRST202' ||
+                                    rpcError.code === '42883' ||
+                                    msg.includes('schema cache') ||
+                                    (msg.includes('function') && msg.includes('not found')) ||
+                                    msg.includes('could not find');
+                if (!isMissingFn) {
+                    throw new Error(rpcError.message);
+                }
+            }
+        } catch (err) {
+            const msg = String(err.message || '').toLowerCase();
+            const isMissingFn = err.code === 'PGRST202' ||
+                                err.code === '42883' ||
+                                msg.includes('schema cache') ||
+                                (msg.includes('function') && msg.includes('not found')) ||
+                                msg.includes('could not find');
+            if (!isMissingFn) {
+                throw err;
+            }
+        }
+    }
+
+    // 3. Client-side fallback with atomic rollback on audit history failure
     const updatePayload = { status: newStatus };
     if (assignedEmployeeId !== undefined) {
         updatePayload.assigned_employee_id = assignedEmployeeId;
@@ -290,17 +333,33 @@ export async function updateListingModerationStatus({
         updatePayload.assigned_employee_id = changedByUserId;
     }
 
-    // 3. Update the listing in Supabase
-    const { data: updatedListing, error: updateError } = await supabaseClient
+    let updatedListing;
+    const { data: updateRes, error: updateError } = await supabaseClient
         .from('listings')
         .update(updatePayload)
         .eq('id', listingId)
         .select()
         .single();
 
-    if (updateError) {
+    // If assigned_employee_id column is not in remote DB schema (42703), retry update without it
+    if (updateError && updateError.code === '42703' && 'assigned_employee_id' in updatePayload) {
+        delete updatePayload.assigned_employee_id;
+        const retryRes = await supabaseClient
+            .from('listings')
+            .update(updatePayload)
+            .eq('id', listingId)
+            .select()
+            .single();
+        if (retryRes.error) {
+            console.error('Failed to update listing status on fallback:', retryRes.error);
+            throw retryRes.error;
+        }
+        updatedListing = retryRes.data;
+    } else if (updateError) {
         console.error('Failed to update listing status:', updateError);
         throw updateError;
+    } else {
+        updatedListing = updateRes;
     }
 
     // 4. Log status change in listing_status_history
@@ -312,15 +371,32 @@ export async function updateListingModerationStatus({
         reason: reason ? reason.trim() : (newStatus === 'Active' ? 'Listing approved.' : 'Status updated.')
     };
 
-    const { data: historyRecord, error: historyError } = await supabaseClient
-        .from('listing_status_history')
-        .insert([historyPayload])
-        .select()
-        .single();
+    let historyRecord = null;
+    let historyError = null;
+    try {
+        const histRes = await supabaseClient
+            .from('listing_status_history')
+            .insert([historyPayload])
+            .select()
+            .single();
+        historyRecord = histRes?.data;
+        historyError = histRes?.error;
+    } catch (hErr) {
+        historyError = hErr;
+    }
 
     if (historyError) {
-        console.error('Failed to log listing status history:', historyError);
-        // Non-destructive fallback: log warning but preserve successful status update
+        console.error('Failed to log listing status history, rolling back listing status change:', historyError);
+        // Rollback listing status to preserve consistency and avoid unlogged mutations
+        try {
+            await supabaseClient
+                .from('listings')
+                .update({ status: oldStatus })
+                .eq('id', listingId);
+        } catch (rbErr) {
+            console.error('Rollback failed:', rbErr);
+        }
+        throw new Error(`Audit history logging failed: ${historyError.message}. Status change was rolled back.`);
     }
 
     // 5. Notify the listing owner/broker if brokerId is present
@@ -385,7 +461,12 @@ export async function assignListingEmployee({
         .select()
         .single();
 
-    if (error) throw error;
+    if (error) {
+        if (error.code === '42703' || String(error.message).includes('assigned_employee_id')) {
+            throw new Error("Reviewer assignment requires the 'assigned_employee_id' database column. Please apply the listing approval migration.");
+        }
+        throw error;
+    }
     return data;
 }
 
@@ -395,6 +476,7 @@ export async function assignListingEmployee({
 
 /**
  * Loads listings for the moderation queue with filtering and search.
+ * Safely resolves employee profiles without crashing if relationship hints are missing.
  *
  * @param {Object} params
  * @param {Object} [supabaseClient=supabase]
@@ -407,34 +489,79 @@ export async function fetchModerationListings({
     limit = 50,
     currentUserId = null
 } = {}, supabaseClient = supabase) {
-    let query = supabaseClient
-        .from('listings')
-        .select('*, assigned_employee:profiles!listings_assigned_employee_id_fkey(id, full_name, role)')
-        .order('created_at', { ascending: false });
+    function buildQuery(selectClause, omitAssignFilter = false) {
+        let q = supabaseClient
+            .from('listings')
+            .select(selectClause)
+            .order('created_at', { ascending: false });
 
-    // Status filtering
-    if (statusFilter && statusFilter !== 'All') {
-        if (statusFilter === 'Active' || statusFilter === 'Approved') {
-            query = query.eq('status', 'Active');
-        } else {
-            query = query.eq('status', statusFilter);
+        if (statusFilter && statusFilter !== 'All') {
+            if (statusFilter === 'Active' || statusFilter === 'Approved') {
+                q = q.eq('status', 'Active');
+            } else {
+                q = q.eq('status', statusFilter);
+            }
         }
+
+        if (!omitAssignFilter) {
+            if (assignFilter === 'Me' && currentUserId) {
+                q = q.eq('assigned_employee_id', currentUserId);
+            } else if (assignFilter === 'Unassigned') {
+                q = q.is('assigned_employee_id', null);
+            }
+        }
+
+        return q;
     }
 
-    // Assignment filtering
-    if (assignFilter === 'Me' && currentUserId) {
-        query = query.eq('assigned_employee_id', currentUserId);
-    } else if (assignFilter === 'Unassigned') {
-        query = query.is('assigned_employee_id', null);
-    }
+    let listings = [];
 
-    const { data, error } = await query.limit(limit);
-    if (error) {
-        console.error('Failed to fetch listings for moderation:', error);
-        throw error;
-    }
+    // 1. Attempt query with foreign key relation
+    const joinedQuery = buildQuery('*, assigned_employee:profiles!listings_assigned_employee_id_fkey(id, full_name, role)');
+    const { data: joinedData, error: joinedError } = await joinedQuery.limit(limit);
 
-    let listings = data || [];
+    if (!joinedError && joinedData) {
+        listings = joinedData;
+    } else if (joinedError && (joinedError.code === 'PGRST200' || joinedError.code === '42703' || String(joinedError.message).includes('schema cache'))) {
+        // 2. Graceful fallback for schema without explicit foreign key constraint
+        const directQuery = buildQuery('*', true);
+        const { data: directData, error: directError } = await directQuery.limit(limit);
+        if (directError) {
+            console.error('Failed to fetch listings directly:', directError);
+            throw directError;
+        }
+
+        listings = directData || [];
+
+        // Apply assignment filter client-side if needed
+        if (assignFilter === 'Me' && currentUserId) {
+            listings = listings.filter(l => l.assigned_employee_id === currentUserId);
+        } else if (assignFilter === 'Unassigned') {
+            listings = listings.filter(l => !l.assigned_employee_id);
+        }
+
+        // Batch resolve employee profiles for assigned listings
+        const employeeIds = [...new Set(listings.map(l => l.assigned_employee_id).filter(Boolean))];
+        if (employeeIds.length > 0) {
+            try {
+                const { data: profiles } = await supabaseClient
+                    .from('profiles')
+                    .select('id, full_name, role')
+                    .in('id', employeeIds);
+                const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+                listings.forEach(l => {
+                    if (l.assigned_employee_id && profileMap.has(l.assigned_employee_id)) {
+                        l.assigned_employee = profileMap.get(l.assigned_employee_id);
+                    }
+                });
+            } catch (pErr) {
+                console.warn('Could not batch-resolve employee profiles:', pErr);
+            }
+        }
+    } else if (joinedError) {
+        console.error('Failed to fetch listings for moderation:', joinedError);
+        throw joinedError;
+    }
 
     // Client-side text search if searchQuery is provided
     if (searchQuery && typeof searchQuery === 'string') {

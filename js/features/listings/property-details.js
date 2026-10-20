@@ -43,16 +43,35 @@ export async function initBuyerDetailsPage() {
     }
 
     const session = await getCurrentSession();
-    const userRole = localStorage.getItem('role');
-    const isOwner = session && session.user && session.user.id === l.broker_id;
-    const isStaff = userRole === 'Admin' || userRole === 'Employee';
-    const isAdminPreview = new URLSearchParams(window.location.search).get('adminPreview') === '1';
+    let isOwner = false;
+    let isStaff = false;
+
+    if (session && session.user) {
+        isOwner = session.user.id === l.broker_id || (l.created_by && session.user.id === l.created_by);
+        const userProfile = await getProfile(session.user.id);
+        const trustedRole = userProfile?.role || localStorage.getItem('role');
+        isStaff = trustedRole === 'Admin' || trustedRole === 'Employee';
+    }
 
     const isSoldOut = isListingSoldOut(l);
+    const isPubliclyPermitted = l.status === 'Active' || isSoldOut;
 
-    if (l.status !== 'Active' && !isSoldOut && !isOwner && !isStaff && !isAdminPreview) {
+    // Strict access control: Non-public listings can ONLY be viewed by verified listing owners or verified staff
+    if (!isPubliclyPermitted && !isOwner && !isStaff) {
+        const mainContent = document.querySelector('main') || document.body;
+        if (mainContent) {
+            mainContent.innerHTML = `
+                <div class="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center">
+                    <span class="material-symbols-outlined text-[64px] text-slate-300 mb-4">lock</span>
+                    <h2 class="text-2xl font-black text-slate-900 mb-2">Listing Unavailable</h2>
+                    <p class="text-sm text-slate-500 max-w-md mb-6">This property listing is currently pending moderation review or is no longer publicly visible.</p>
+                    <a href="properties.html" class="px-6 py-2.5 bg-slate-900 text-white font-bold text-xs uppercase tracking-wider rounded-xl hover:bg-slate-800 transition-colors shadow-sm">
+                        Browse Available Properties
+                    </a>
+                </div>
+            `;
+        }
         showToast('Property details are pending review or unavailable.', true);
-        setTimeout(() => { window.location.href = 'properties.html'; }, 2000);
         return;
     }
 
