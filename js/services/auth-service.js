@@ -16,8 +16,9 @@ export {
     SUPPORTED_COUNTRY_CODES
 } from './phone-auth-service.js';
 
-export async function getCurrentSession() {
-    const { data: { session }, error } = await supabase.auth.getSession();
+export async function getCurrentSession(client = supabase) {
+    if (!client || !client.auth) return null;
+    const { data: { session }, error } = await client.auth.getSession();
     if (error) {
         console.error('Error fetching session:', error);
         return null;
@@ -25,8 +26,9 @@ export async function getCurrentSession() {
     return session;
 }
 
-export async function getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
+export async function getCurrentUser(client = supabase) {
+    if (!client || !client.auth) return null;
+    const { data: { user }, error } = await client.auth.getUser();
     if (error) {
         console.error('Error fetching user:', error);
         return null;
@@ -65,9 +67,9 @@ export async function resetPassword(email, redirectTo) {
     return data;
 }
 
-export async function getUserProfile(userId) {
-    if (!userId) return null;
-    const { data, error } = await supabase
+export async function getUserProfile(userId, client = supabase) {
+    if (!userId || !client) return null;
+    const { data, error } = await client
         .from('profiles')
         .select('*')
         .eq('id', userId)

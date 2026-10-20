@@ -268,12 +268,14 @@
           </div>
         </div>
       </div>
-      <!-- Trailing actions: Sign In / Sign Up or Role-based items -->
-      <div class="flex items-center gap-4">
-        <button class="text-slate-500 hover:text-slate-900 transition-colors">
-          <span class="material-symbols-outlined text-[24px]">account_circle</span>
-        </button>
-        <button class="bg-slate-900 text-white px-5 py-2 rounded-lg font-bold text-xs hover:bg-slate-800 transition-colors uppercase tracking-wider ml-2">Dashboard</button>
+      <!-- Trailing actions (Standardized Header) -->
+      <div id="header-trailing-actions" class="header-trailing-actions flex items-center gap-2 sm:gap-4">
+        <a href="/login.html" class="text-slate-600 hover:text-slate-900 transition-colors font-bold text-xs uppercase tracking-wider px-3 py-2 inline-block">
+          Sign In
+        </a>
+        <a href="/login.html?mode=signup" class="bg-slate-900 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg font-bold text-xs hover:bg-slate-800 transition-colors uppercase tracking-wider shadow-sm inline-block">
+          Sign Up
+        </a>
       </div>
     </div>
   </nav>

@@ -23,9 +23,24 @@ import {
     initTouchDropdowns,
     wireCommonLinks,
     normalizeInternalLinks,
-    updateHeaderVisibility
+    updateHeaderVisibility,
+    syncHeaderWithAuth
 } from './js/ui/navigation.js';
+import { supabase } from './js/core/supabase-client.js';
 import { formatListingPrice, formatIntentLabel } from './js/services/listing-service.js';
+
+// Listen to auth state changes to dynamically synchronize header
+if (supabase?.auth?.onAuthStateChange) {
+    supabase.auth.onAuthStateChange(async (event) => {
+        if (event === 'SIGNED_OUT') {
+            localStorage.setItem('role', 'Guest');
+            localStorage.removeItem('userName');
+            updateHeaderVisibility('Guest');
+        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+            await syncHeaderWithAuth(supabase);
+        }
+    });
+}
 
 // Global utility bindings for inline HTML templates
 window.formatListingPrice = formatListingPrice;

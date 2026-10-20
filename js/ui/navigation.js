@@ -5,9 +5,10 @@
 
 import { toAppUrl } from '../core/router.js';
 import { roleHomePage } from '../core/auth-state.js';
+import { getCurrentSession, getUserProfile } from '../services/auth-service.js';
 
-export function updateHeaderVisibility() {
-    let currentRoleRaw = localStorage.getItem('role') || 'Guest';
+export function updateHeaderVisibility(explicitRole = null) {
+    let currentRoleRaw = explicitRole || localStorage.getItem('role') || 'Guest';
     let currentRole = currentRoleRaw;
     if (currentRoleRaw) {
         currentRole = currentRoleRaw.charAt(0).toUpperCase() + currentRoleRaw.slice(1).toLowerCase();
@@ -15,6 +16,14 @@ export function updateHeaderVisibility() {
     
     // Find all trailing actions containers
     const containers = [];
+
+    // 1. Direct container element lookups (standardized header container IDs and classes)
+    const directContainers = document.querySelectorAll('#header-trailing-actions, .header-trailing-actions, #mobile-trailing-actions');
+    directContainers.forEach(c => {
+        if (!containers.includes(c)) containers.push(c);
+    });
+
+    // 2. Search by account / logout icons
     const accountIcons = document.querySelectorAll('.material-symbols-outlined');
     accountIcons.forEach(el => {
         if (el.textContent.trim() === 'account_circle' || el.textContent.trim() === 'logout') {
@@ -23,7 +32,7 @@ export function updateHeaderVisibility() {
         }
     });
     
-    // Fallback query if standard icon isn't found
+    // 3. Fallback query if standard icon isn't found
     if (containers.length === 0) {
         const signInBtns = document.querySelectorAll('button, a');
         signInBtns.forEach(el => {
@@ -249,3 +258,36 @@ export function normalizeInternalLinks() {
         link.setAttribute('href', toAppUrl(href));
     });
 }
+
+/**
+ * Resolves authentic session from Supabase, updates local state,
+ * and synchronizes the header controls to prevent stale/incorrect UI.
+ *
+ * @param {Object} [supabaseClient]
+ * @returns {Promise<string>} resolved role ('Guest', 'Buyer', 'Seller', 'Broker', 'Admin', 'Employee')
+ */
+export async function syncHeaderWithAuth(supabaseClient) {
+    try {
+        const session = await getCurrentSession(supabaseClient);
+        if (!session) {
+            localStorage.setItem('role', 'Guest');
+            updateHeaderVisibility('Guest');
+            return 'Guest';
+        }
+        const profile = await getUserProfile(session.user.id, supabaseClient);
+        const role = profile?.role || localStorage.getItem('role') || 'Buyer';
+        const activeRole = localStorage.getItem('role');
+        const effectiveRole = (role === 'Admin' && (activeRole === 'Broker' || activeRole === 'Employee' || activeRole === 'Admin'))
+            ? activeRole
+            : role;
+        localStorage.setItem('role', effectiveRole);
+        updateHeaderVisibility(effectiveRole);
+        return effectiveRole;
+    } catch (err) {
+        console.warn('Could not sync header with Supabase session:', err);
+        const fallbackRole = localStorage.getItem('role') || 'Guest';
+        updateHeaderVisibility(fallbackRole);
+        return fallbackRole;
+    }
+}
+
