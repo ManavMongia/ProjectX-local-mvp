@@ -109,41 +109,41 @@
           </div>
 
           <!-- 3-Role Grid -->
-          <div id="account-type-grid" class="grid grid-cols-3 gap-2.5">
+          <div id="account-type-grid" role="radiogroup" aria-label="Account Type" class="grid grid-cols-3 gap-2.5">
             <!-- Buyer Card -->
-            <button type="button" data-role="Buyer"
-              class="account-type-card group relative p-3 text-left rounded-xl border border-slate-900 bg-slate-900/5 ring-1 ring-slate-900 text-slate-900 shadow-sm cursor-pointer flex flex-col justify-between h-24">
-              <div class="flex items-start justify-between w-full">
+            <button type="button" data-role="Buyer" role="radio" aria-checked="true" tabindex="0"
+              class="account-type-card group relative p-3 text-left rounded-xl border border-slate-900 bg-slate-900/5 ring-1 ring-slate-900 text-slate-900 shadow-sm cursor-pointer flex flex-col justify-between h-24 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900">
+              <div class="flex items-start justify-between w-full pointer-events-none">
                 <span class="role-main-icon material-symbols-outlined text-[22px] text-slate-900">home</span>
                 <span class="role-check-indicator material-symbols-outlined text-[16px] text-slate-900">check_circle</span>
               </div>
-              <div>
+              <div class="pointer-events-none">
                 <div class="font-extrabold text-xs text-slate-900 tracking-tight">Buyer</div>
                 <div class="text-[10px] text-slate-500 leading-tight mt-0.5 truncate">Find & buy homes</div>
               </div>
             </button>
 
             <!-- Seller Card -->
-            <button type="button" data-role="Seller"
-              class="account-type-card group relative p-3 text-left rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-slate-300 cursor-pointer flex flex-col justify-between h-24">
-              <div class="flex items-start justify-between w-full">
+            <button type="button" data-role="Seller" role="radio" aria-checked="false" tabindex="-1"
+              class="account-type-card group relative p-3 text-left rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-slate-300 cursor-pointer flex flex-col justify-between h-24 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900">
+              <div class="flex items-start justify-between w-full pointer-events-none">
                 <span class="role-main-icon material-symbols-outlined text-[22px] text-slate-400">sell</span>
                 <span class="role-check-indicator material-symbols-outlined text-[16px] text-slate-900 hidden">check_circle</span>
               </div>
-              <div>
+              <div class="pointer-events-none">
                 <div class="font-extrabold text-xs text-slate-900 tracking-tight">Seller</div>
                 <div class="text-[10px] text-slate-500 leading-tight mt-0.5 truncate">List & sell</div>
               </div>
             </button>
 
             <!-- Broker Card -->
-            <button type="button" data-role="Broker"
-              class="account-type-card group relative p-3 text-left rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-slate-300 cursor-pointer flex flex-col justify-between h-24">
-              <div class="flex items-start justify-between w-full">
+            <button type="button" data-role="Broker" role="radio" aria-checked="false" tabindex="-1"
+              class="account-type-card group relative p-3 text-left rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-slate-300 cursor-pointer flex flex-col justify-between h-24 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900">
+              <div class="flex items-start justify-between w-full pointer-events-none">
                 <span class="role-main-icon material-symbols-outlined text-[22px] text-slate-400">domain</span>
                 <span class="role-check-indicator material-symbols-outlined text-[16px] text-slate-900 hidden">check_circle</span>
               </div>
-              <div>
+              <div class="pointer-events-none">
                 <div class="font-extrabold text-xs text-slate-900 tracking-tight">Broker</div>
                 <div class="text-[10px] text-slate-500 leading-tight mt-0.5 truncate">Manage deals</div>
               </div>

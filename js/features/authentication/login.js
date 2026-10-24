@@ -304,6 +304,10 @@ export function initLoginPage() {
             const cardRole = (card.getAttribute('data-role') || card.textContent || '').trim().toLowerCase();
             const isMatch = cardRole.toLowerCase() === selectedRole.toLowerCase();
 
+            // Toggle accessibility attributes
+            card.setAttribute('aria-checked', isMatch ? 'true' : 'false');
+            card.setAttribute('tabindex', isMatch ? '0' : '-1');
+
             // Toggle card classes
             if (isMatch) {
                 card.classList.remove('border-slate-200', 'bg-white', 'text-slate-600', 'hover:border-slate-300');
@@ -335,14 +339,58 @@ export function initLoginPage() {
         updateUI();
     }
 
-    // Role Card click listeners
-    roleCards.forEach(card => {
+    // Role Card container event delegation
+    const accountTypeGrid = document.getElementById('account-type-grid');
+    if (accountTypeGrid) {
+        accountTypeGrid.addEventListener('click', (e) => {
+            const card = e.target.closest('.account-type-card');
+            if (card) {
+                e.preventDefault();
+                const role = card.getAttribute('data-role') || card.textContent.trim();
+                if (role) selectRole(role);
+            }
+        });
+    }
+
+    // Role Card click listeners & Keyboard navigation
+    const roleCardList = Array.from(roleCards);
+    roleCardList.forEach((card, idx) => {
         card.addEventListener('click', (e) => {
             e.preventDefault();
             const role = card.getAttribute('data-role') || card.textContent.trim();
             selectRole(role);
         });
+
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                const nextIdx = (idx + 1) % roleCardList.length;
+                const nextCard = roleCardList[nextIdx];
+                nextCard.focus();
+                const nextRole = nextCard.getAttribute('data-role') || nextCard.textContent.trim();
+                if (nextRole) selectRole(nextRole);
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                const prevIdx = (idx - 1 + roleCardList.length) % roleCardList.length;
+                const prevCard = roleCardList[prevIdx];
+                prevCard.focus();
+                const prevRole = prevCard.getAttribute('data-role') || prevCard.textContent.trim();
+                if (prevRole) selectRole(prevRole);
+            } else if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') {
+                e.preventDefault();
+                const role = card.getAttribute('data-role') || card.textContent.trim();
+                if (role) selectRole(role);
+            }
+        });
     });
+
+    if (typeof window !== 'undefined') {
+        window._loginState = {
+            selectRole,
+            getSelectedRole: () => selectedRole,
+            getCurrentMode: () => currentMode
+        };
+    }
 
     // Forgot password navigation
     if (forgotPasswordLink) {
